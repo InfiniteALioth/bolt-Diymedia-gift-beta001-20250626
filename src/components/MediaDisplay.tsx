@@ -139,19 +139,30 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
 
   if (mediaItems.length === 0) {
     return (
-      <div className="w-full h-screen bg-gray-900 flex items-center justify-center">
+      <div className="w-full h-screen bg-gray-900 flex items-center justify-center relative">
         <div className="text-center text-white px-4">
           <div className="w-16 h-16 bg-white bg-opacity-10 rounded-full flex items-center justify-center mx-auto mb-4">
             <Play className="h-8 w-8" />
           </div>
           <h3 className="text-xl font-semibold mb-2">暂无媒体内容</h3>
-          <p className="text-gray-300 mb-4">点击右上角的上传按钮开始分享</p>
+          <p className="text-gray-300 mb-4">点击右下角的上传按钮开始分享</p>
           
           <div className="mt-4 p-3 bg-blue-500 bg-opacity-20 rounded-lg md:hidden">
             <p className="text-sm text-blue-200">
               移动端用户：请确保浏览器支持文件上传功能
             </p>
           </div>
+        </div>
+
+        {/* 即使没有媒体也显示添加按钮 */}
+        <div className="absolute bottom-16 right-4 z-50">
+          <button
+            onClick={onAddMedia}
+            className="w-8 h-8 bg-gradient-to-r from-blue-500/80 to-purple-600/80 hover:from-blue-600/90 hover:to-purple-700/90 rounded-full flex items-center justify-center text-white transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+            title="添加媒体"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
         </div>
       </div>
     );
@@ -299,14 +310,14 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
         </button>
       </div>
 
-      {/* Media Control Buttons - 移动到进度条上方2px */}
-      <div className="absolute bottom-20 right-4 z-50">
+      {/* Media Control Buttons - 与聊天面板底部对齐 */}
+      <div className="absolute bottom-16 right-4 z-50">
         <div className="flex space-x-2">
           {/* 删除当前媒体按钮 (-) */}
           <button
             onClick={handleDeleteMedia}
             disabled={!hasCurrentMedia}
-            className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 ${
+            className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 transform hover:scale-105 ${
               hasCurrentMedia
                 ? 'bg-red-500/80 hover:bg-red-600/90 text-white shadow-lg hover:shadow-xl'
                 : 'bg-gray-600/50 text-gray-400 cursor-not-allowed'
@@ -319,7 +330,7 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
           {/* 添加媒体按钮 (+) */}
           <button
             onClick={onAddMedia}
-            className="w-8 h-8 bg-gradient-to-r from-blue-500/80 to-purple-600/80 hover:from-blue-600/90 hover:to-purple-700/90 rounded-full flex items-center justify-center text-white transition-all duration-200 shadow-lg hover:shadow-xl"
+            className="w-8 h-8 bg-gradient-to-r from-blue-500/80 to-purple-600/80 hover:from-blue-600/90 hover:to-purple-700/90 rounded-full flex items-center justify-center text-white transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
             title="添加媒体"
           >
             <Plus className="h-4 w-4" />
