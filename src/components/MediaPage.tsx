@@ -6,7 +6,7 @@ import MediaDisplay from './MediaDisplay';
 import ChatPanel from './ChatPanel';
 import MediaUpload from './MediaUpload';
 import UserSetup from './UserSetup';
-import { Upload, User } from 'lucide-react';
+import { User } from 'lucide-react';
 
 const MediaPage: React.FC = () => {
   const { user, createUser, updateUsername } = useAuth();
@@ -40,7 +40,7 @@ const MediaPage: React.FC = () => {
       <div className="w-full h-screen bg-gray-900 flex items-center justify-center">
         <div className="text-center text-white p-4">
           <div className="w-16 h-16 bg-white bg-opacity-10 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
-            <Upload className="h-8 w-8" />
+            <User className="h-8 w-8" />
           </div>
           <h3 className="text-xl font-semibold mb-2">加载中...</h3>
           <p className="text-gray-300 mb-4">正在加载媒体内容</p>
@@ -137,6 +137,10 @@ const MediaPage: React.FC = () => {
         onIndexChange={setCurrentMediaIndex}
         autoPlay={autoPlay}
         onAutoPlayChange={handleAutoPlayChange}
+        onAddMedia={() => setShowUpload(true)}
+        onDeleteCurrentMedia={handleDeleteCurrentMedia}
+        onPauseAutoPlay={handlePauseAutoPlay}
+        hasCurrentMedia={mediaItems.length > 0}
       />
 
       {/* Chat Panel */}
@@ -144,10 +148,6 @@ const MediaPage: React.FC = () => {
         messages={chatMessages}
         currentUsername={user.username}
         onSendMessage={handleSendMessage}
-        onAddMedia={() => setShowUpload(true)}
-        onDeleteCurrentMedia={handleDeleteCurrentMedia}
-        onPauseAutoPlay={handlePauseAutoPlay}
-        hasCurrentMedia={mediaItems.length > 0}
       />
 
       {/* Modals */}
