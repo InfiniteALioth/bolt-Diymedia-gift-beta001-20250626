@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MediaItem } from '../types';
-import { Play, ChevronUp, ChevronDown, AlertCircle, RefreshCw, Volume2 } from 'lucide-react';
+import { Play, ChevronUp, ChevronDown, AlertCircle, RefreshCw, Volume2, Plus, Minus, Upload } from 'lucide-react';
 import VideoPlayer from './VideoPlayer';
 
 interface MediaDisplayProps {
@@ -9,6 +9,10 @@ interface MediaDisplayProps {
   onIndexChange: (index: number) => void;
   autoPlay: boolean;
   onAutoPlayChange?: (autoPlay: boolean) => void;
+  onAddMedia?: () => void;
+  onDeleteCurrentMedia?: () => void;
+  onPauseAutoPlay?: () => void;
+  hasCurrentMedia?: boolean;
 }
 
 const MediaDisplay: React.FC<MediaDisplayProps> = ({
@@ -16,7 +20,11 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
   currentIndex,
   onIndexChange,
   autoPlay,
-  onAutoPlayChange
+  onAutoPlayChange,
+  onAddMedia,
+  onDeleteCurrentMedia,
+  onPauseAutoPlay,
+  hasCurrentMedia = false
 }) => {
   const [failedMedia, setFailedMedia] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
@@ -110,6 +118,20 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
       onAutoPlayChange(newAutoPlay);
     } else {
       console.error('❌ onAutoPlayChange 回调函数不存在!');
+    }
+  };
+
+  // 处理删除当前媒体
+  const handleDeleteMedia = () => {
+    if (!hasCurrentMedia) return;
+    
+    // 暂停自动播放
+    onPauseAutoPlay?.();
+    
+    // 询问用户确认删除
+    const confirmed = confirm('确定要删除当前显示的媒体吗？此操作不可恢复。');
+    if (confirmed && onDeleteCurrentMedia) {
+      onDeleteCurrentMedia();
     }
   };
 
@@ -275,6 +297,42 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
           <div className={`w-3 h-3 rounded-full ${autoPlay ? 'bg-white' : 'bg-gray-400'}`}></div>
           <span>{autoPlay ? '自动播放' : '手动切换'}</span>
         </button>
+      </div>
+
+      {/* Upload Button */}
+      <button
+        onClick={onAddMedia}
+        className="absolute top-4 right-4 z-40 w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 rounded-full flex items-center justify-center text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
+      >
+        <Upload className="h-6 w-6" />
+      </button>
+
+      {/* Media Control Buttons - 移动到进度条上方2px */}
+      <div className="absolute bottom-20 right-4 z-50">
+        <div className="flex space-x-2">
+          {/* 删除当前媒体按钮 (-) */}
+          <button
+            onClick={handleDeleteMedia}
+            disabled={!hasCurrentMedia}
+            className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 ${
+              hasCurrentMedia
+                ? 'bg-red-500/80 hover:bg-red-600/90 text-white shadow-lg hover:shadow-xl'
+                : 'bg-gray-600/50 text-gray-400 cursor-not-allowed'
+            }`}
+            title={hasCurrentMedia ? "删除当前媒体" : "无媒体可删除"}
+          >
+            <Minus className="h-4 w-4" />
+          </button>
+          
+          {/* 添加媒体按钮 (+) */}
+          <button
+            onClick={onAddMedia}
+            className="w-8 h-8 bg-gradient-to-r from-blue-500/80 to-purple-600/80 hover:from-blue-600/90 hover:to-purple-700/90 rounded-full flex items-center justify-center text-white transition-all duration-200 shadow-lg hover:shadow-xl"
+            title="添加媒体"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       {/* Navigation Controls */}
