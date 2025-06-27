@@ -54,19 +54,6 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
 
     if (typeCount > 1) return '每次只能上传同一类型的媒体';
 
-    // Reduced file size limit for localStorage compatibility (500KB per file)
-    for (const file of files) {
-      if (file.size > 500 * 1024) {
-        return `文件 "${file.name}" 过大，请选择小于500KB的文件以确保能够保存`;
-      }
-    }
-
-    // Check total size to prevent localStorage overflow (2MB total)
-    const totalSize = files.reduce((sum, file) => sum + file.size, 0);
-    if (totalSize > 2 * 1024 * 1024) {
-      return '所选文件总大小超过2MB，请减少文件数量或选择更小的文件';
-    }
-
     return null;
   };
 
@@ -124,6 +111,18 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
+  const formatFileSize = (sizeInBytes: number) => {
+    if (sizeInBytes >= 1024 * 1024 * 1024) {
+      return `${(sizeInBytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+    } else if (sizeInBytes >= 1024 * 1024) {
+      return `${(sizeInBytes / (1024 * 1024)).toFixed(2)} MB`;
+    } else if (sizeInBytes >= 1024) {
+      return `${(sizeInBytes / 1024).toFixed(2)} KB`;
+    } else {
+      return `${sizeInBytes} B`;
+    }
+  };
+
   if (currentStep === 'select') {
     return (
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
@@ -178,19 +177,19 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
             <div className="mt-6 space-y-3">
               <div className="flex items-center space-x-3 text-sm text-gray-600">
                 <Image className="h-4 w-4" />
-                <span>图片：最多3张，每张小于500KB</span>
+                <span>图片：最多3张，支持 JPG、PNG、GIF 等格式</span>
               </div>
               <div className="flex items-center space-x-3 text-sm text-gray-600">
                 <Video className="h-4 w-4" />
-                <span>视频：1个，小于500KB</span>
+                <span>视频：1个，支持 MP4、WebM、MOV 等格式</span>
               </div>
               <div className="flex items-center space-x-3 text-sm text-gray-600">
                 <Music className="h-4 w-4" />
-                <span>音频：1个，小于500KB</span>
+                <span>音频：1个，支持 MP3、WAV、OGG 等格式</span>
               </div>
-              <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <p className="text-xs text-yellow-800">
-                  <strong>注意：</strong>文件将保存在浏览器本地存储中，刷新页面后仍可查看。为确保正常保存，请选择较小的文件（总大小不超过2MB）。
+              <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-xs text-green-800">
+                  <strong>无大小限制：</strong>您可以上传任意大小的媒体文件。文件将保存在浏览器本地存储中，较大的文件可能需要更长的处理时间。
                 </p>
               </div>
             </div>
@@ -228,7 +227,7 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
                       {file.name}
                     </p>
                     <p className="text-xs text-gray-500">
-                      {(file.size / 1024).toFixed(2)} KB
+                      {formatFileSize(file.size)}
                     </p>
                   </div>
                   <button
@@ -239,6 +238,16 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
                   </button>
                 </div>
               ))}
+            </div>
+            
+            {/* 显示总文件大小 */}
+            <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800">
+                <strong>总大小：</strong>{formatFileSize(selectedFiles.reduce((sum, file) => sum + file.size, 0))}
+              </p>
+              <p className="text-xs text-blue-600 mt-1">
+                文件将转换为 Base64 格式保存，处理时间取决于文件大小
+              </p>
             </div>
           </div>
 
