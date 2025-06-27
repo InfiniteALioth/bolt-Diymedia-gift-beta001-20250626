@@ -6,7 +6,7 @@ import MediaDisplay from './MediaDisplay';
 import ChatPanel from './ChatPanel';
 import MediaUpload from './MediaUpload';
 import UserSetup from './UserSetup';
-import { Upload, User, Trash2, Facebook, Twitter, Instagram, Youtube, Share2, MessageCircle } from 'lucide-react';
+import { Upload, User, Trash2 } from 'lucide-react';
 
 const MediaPage: React.FC = () => {
   const { user, createUser, updateUsername } = useAuth();
@@ -89,55 +89,6 @@ const MediaPage: React.FC = () => {
     }
   };
 
-  const handleSocialShare = (platform: string) => {
-    const url = window.location.href;
-    const title = '查看我的媒体分享';
-    
-    switch (platform) {
-      case 'facebook':
-        window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank');
-        break;
-      case 'twitter':
-        window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(title)}`, '_blank');
-        break;
-      case 'instagram':
-        // Instagram doesn't support direct URL sharing, so we'll copy to clipboard
-        navigator.clipboard.writeText(url).then(() => {
-          alert('链接已复制到剪贴板，请在Instagram中粘贴分享');
-        });
-        break;
-      case 'youtube':
-        // For YouTube, we might want to redirect to upload page or copy link
-        navigator.clipboard.writeText(url).then(() => {
-          alert('链接已复制到剪贴板');
-        });
-        break;
-      case 'share':
-        if (navigator.share) {
-          navigator.share({
-            title: title,
-            url: url
-          });
-        } else {
-          navigator.clipboard.writeText(url).then(() => {
-            alert('链接已复制到剪贴板');
-          });
-        }
-        break;
-      case 'message':
-        if (navigator.share) {
-          navigator.share({
-            title: title,
-            url: url
-          });
-        } else {
-          const smsUrl = `sms:?body=${encodeURIComponent(title + ' ' + url)}`;
-          window.open(smsUrl);
-        }
-        break;
-    }
-  };
-
   // 调试信息
   console.log('当前媒体项数量:', mediaItems.length);
   console.log('当前媒体索引:', currentMediaIndex);
@@ -145,57 +96,6 @@ const MediaPage: React.FC = () => {
 
   return (
     <div className="w-full h-screen bg-black overflow-hidden relative">
-      {/* Social Media Icons - Left Side */}
-      <div className="fixed left-4 top-1/2 transform -translate-y-1/2 z-30 flex flex-col space-y-1.5">
-        <button
-          onClick={() => handleSocialShare('facebook')}
-          className="w-6 h-6 bg-white bg-opacity-80 backdrop-blur-sm rounded-full flex items-center justify-center text-blue-600 hover:bg-opacity-100 hover:scale-110 transition-all duration-200"
-          title="分享到 Facebook"
-        >
-          <Facebook className="h-4 w-4" />
-        </button>
-        
-        <button
-          onClick={() => handleSocialShare('twitter')}
-          className="w-6 h-6 bg-white bg-opacity-80 backdrop-blur-sm rounded-full flex items-center justify-center text-blue-400 hover:bg-opacity-100 hover:scale-110 transition-all duration-200"
-          title="分享到 Twitter"
-        >
-          <Twitter className="h-4 w-4" />
-        </button>
-        
-        <button
-          onClick={() => handleSocialShare('instagram')}
-          className="w-6 h-6 bg-white bg-opacity-80 backdrop-blur-sm rounded-full flex items-center justify-center text-pink-500 hover:bg-opacity-100 hover:scale-110 transition-all duration-200"
-          title="分享到 Instagram"
-        >
-          <Instagram className="h-4 w-4" />
-        </button>
-        
-        <button
-          onClick={() => handleSocialShare('youtube')}
-          className="w-6 h-6 bg-white bg-opacity-80 backdrop-blur-sm rounded-full flex items-center justify-center text-red-600 hover:bg-opacity-100 hover:scale-110 transition-all duration-200"
-          title="分享到 YouTube"
-        >
-          <Youtube className="h-4 w-4" />
-        </button>
-        
-        <button
-          onClick={() => handleSocialShare('share')}
-          className="w-6 h-6 bg-white bg-opacity-80 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-600 hover:bg-opacity-100 hover:scale-110 transition-all duration-200"
-          title="更多分享选项"
-        >
-          <Share2 className="h-4 w-4" />
-        </button>
-        
-        <button
-          onClick={() => handleSocialShare('message')}
-          className="w-6 h-6 bg-white bg-opacity-80 backdrop-blur-sm rounded-full flex items-center justify-center text-green-600 hover:bg-opacity-100 hover:scale-110 transition-all duration-200"
-          title="发送消息"
-        >
-          <MessageCircle className="h-4 w-4" />
-        </button>
-      </div>
-
       {/* Header */}
       <div className="absolute top-0 left-0 right-0 z-40 bg-gradient-to-b from-black/50 to-transparent">
         <div className="flex items-center justify-between p-4">
