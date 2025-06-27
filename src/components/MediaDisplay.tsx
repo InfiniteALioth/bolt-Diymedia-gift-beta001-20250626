@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MediaItem } from '../types';
-import { Play, ChevronUp, ChevronDown, AlertCircle, RefreshCw } from 'lucide-react';
+import { Play, ChevronUp, ChevronDown, AlertCircle, RefreshCw, Volume2 } from 'lucide-react';
+import VideoPlayer from './VideoPlayer';
 
 interface MediaDisplayProps {
   mediaItems: MediaItem[];
@@ -17,6 +18,7 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
 }) => {
   const [failedMedia, setFailedMedia] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
+  const [autoPlayEnabled, setAutoPlayEnabled] = useState(autoPlay);
 
   const currentMedia = mediaItems[currentIndex];
 
@@ -28,14 +30,14 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
   });
 
   useEffect(() => {
-    if (!autoPlay || mediaItems.length <= 1) return;
+    if (!autoPlayEnabled || mediaItems.length <= 1) return;
 
     const interval = setInterval(() => {
       onIndexChange((currentIndex + 1) % mediaItems.length);
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [currentIndex, mediaItems.length, autoPlay, onIndexChange]);
+  }, [currentIndex, mediaItems.length, autoPlayEnabled, onIndexChange]);
 
   useEffect(() => {
     // 当媒体项改变时重置加载状态
@@ -74,6 +76,15 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
   const handleMediaLoad = () => {
     console.log('媒体加载成功');
     setIsLoading(false);
+  };
+
+  const handleVideoEnded = () => {
+    if (autoPlayEnabled && mediaItems.length > 1) {
+      // 视频结束后等待3秒自动切换
+      setTimeout(() => {
+        handleNext();
+      }, 3000);
+    }
   };
 
   const isMediaFailed = (mediaId: string) => failedMedia.has(mediaId);
@@ -172,22 +183,14 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
             )}
             
             {currentMedia.type === 'video' && (
-              <video
+              <VideoPlayer
                 src={currentMedia.url}
-                className="max-w-full max-h-full object-contain"
-                style={{ 
-                  maxWidth: '100vw', 
-                  maxHeight: '100vh',
-                  width: 'auto',
-                  height: 'auto'
-                }}
-                autoPlay={autoPlay}
-                loop
-                playsInline
-                controls
-                preload="metadata"
-                onLoadedData={handleMediaLoad}
+                autoPlay={autoPlayEnabled}
+                loop={false}
+                onEnded={handleVideoEnded}
                 onError={() => handleMediaError(currentMedia.id)}
+                onLoadedData={handleMediaLoad}
+                className="w-full h-full"
               />
             )}
             
@@ -195,7 +198,7 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
               <div className="w-full max-w-md p-8 mx-4 bg-gradient-to-br from-purple-600 to-blue-600 rounded-2xl shadow-2xl">
                 <div className="text-center mb-6">
                   <div className="w-20 h-20 bg-white bg-opacity-20 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Play className="h-10 w-10 text-white" />
+                    <Volume2 className="h-10 w-10 text-white" />
                   </div>
                   <h3 className="text-xl font-semibold text-white mb-2">音频播放中</h3>
                   <p className="text-white text-opacity-80">{currentMedia.caption || '正在播放音频内容'}</p>
@@ -204,10 +207,11 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
                   src={currentMedia.url}
                   className="w-full"
                   controls
-                  autoPlay={autoPlay}
+                  autoPlay={autoPlayEnabled}
                   preload="metadata"
                   onLoadedData={handleMediaLoad}
                   onError={() => handleMediaError(currentMedia.id)}
+                  onEnded={handleVideoEnded}
                 />
               </div>
             )}
@@ -223,6 +227,20 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
             由 {currentMedia.uploaderName} 上传
           </p>
         </div>
+      </div>
+
+      {/* Auto-play Toggle */}
+      <div className="absolute top-4 left-4">
+        <button
+          onClick={() => setAutoPlayEnabled(!autoPlayEnabled)}
+          className={`px-3 py-1 rounded-full text-sm font-medium transition-all duration-200 ${
+            autoPlayEnabled 
+              ? 'bg-green-500 text-white' 
+              : 'bg-white bg-opacity-20 text-white hover:bg-opacity-30'
+          }`}
+        >
+          {autoPlayEnabled ? '自动播放' : '手动切换'}
+        </button>
       </div>
 
       {/* Navigation Controls */}
