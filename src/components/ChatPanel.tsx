@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChatMessage } from '../types';
-import { Send } from 'lucide-react';
+import { Send, ChevronUp, ChevronDown } from 'lucide-react';
 
 interface ChatPanelProps {
   messages: ChatMessage[];
@@ -16,13 +16,16 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
   const [inputValue, setInputValue] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const [scrollPosition, setScrollPosition] = useState(0);
 
   const byteLength = new TextEncoder().encode(inputValue).length;
   const isValid = inputValue.trim().length > 0 && byteLength <= 120;
 
   useEffect(() => {
     // 自动滚动到最新消息
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }
   }, [messages]);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -33,36 +36,83 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
     }
   };
 
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLDivElement;
+    setScrollPosition(target.scrollTop);
+  };
+
+  const scrollUp = () => {
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollBy({ top: -60, behavior: 'smooth' });
+    }
+  };
+
+  const scrollDown = () => {
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollBy({ top: 60, behavior: 'smooth' });
+    }
+  };
+
+  const canScrollUp = scrollPosition > 0;
+  const canScrollDown = messagesContainerRef.current 
+    ? scrollPosition < messagesContainerRef.current.scrollHeight - messagesContainerRef.current.clientHeight 
+    : false;
+
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-4">
       {/* Chat Messages - 高度缩小一半，宽度向左缩小三分之一 */}
-      <div className="mb-4 mr-[33%]">
-        {/* Messages List - 移除滚动条背景，高度从max-h-64改为max-h-32 */}
+      <div className="mb-4 mr-[33%] relative">
+        {/* 左侧滚动控制按钮 */}
+        <div className="absolute left-0 top-1/2 transform -translate-y-1/2 flex flex-col space-y-2 z-10">
+          <button
+            onClick={scrollUp}
+            disabled={!canScrollUp}
+            className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 ${
+              canScrollUp 
+                ? 'bg-white/20 hover:bg-white/30 text-white' 
+                : 'bg-white/10 text-white/30 cursor-not-allowed'
+            }`}
+          >
+            <ChevronUp className="h-4 w-4" />
+          </button>
+          
+          <button
+            onClick={scrollDown}
+            disabled={!canScrollDown}
+            className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 ${
+              canScrollDown 
+                ? 'bg-white/20 hover:bg-white/30 text-white' 
+                : 'bg-white/10 text-white/30 cursor-not-allowed'
+            }`}
+          >
+            <ChevronDown className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Messages List - 调整为显示6条信息，每条独占一行 */}
         <div 
           ref={messagesContainerRef}
-          className="space-y-2 max-h-32 overflow-y-auto scrollbar-hide"
+          className="space-y-1 max-h-32 overflow-y-auto scrollbar-hide pl-12"
           style={{
-            /* 隐藏滚动条但保持滚动功能 */
-            scrollbarWidth: 'none', /* Firefox */
-            msOverflowStyle: 'none', /* IE and Edge */
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
           }}
+          onScroll={handleScroll}
         >
           {messages.map((message) => (
             <div
               key={message.id}
-              className="inline-block bg-black/30 backdrop-blur-sm rounded-lg px-3 py-2 text-white max-w-full"
+              className="block bg-black/30 backdrop-blur-sm rounded-lg px-2 py-1 text-white w-fit max-w-full"
               style={{
-                /* 消息背景根据文字长度自动调节，文字超出时自动换行 */
-                width: 'fit-content',
-                maxWidth: '100%',
                 wordWrap: 'break-word',
                 overflowWrap: 'break-word',
-                hyphens: 'auto'
+                hyphens: 'auto',
+                lineHeight: '1.2'
               }}
             >
-              <span className="font-medium text-blue-400">{message.username}</span>
-              <span className="text-white/70">: </span>
-              <span className="break-words">{message.content}</span>
+              <span className="font-medium text-blue-400 text-sm">{message.username}</span>
+              <span className="text-white/70 text-sm">: </span>
+              <span className="break-words text-sm">{message.content}</span>
             </div>
           ))}
           <div ref={messagesEndRef} />
