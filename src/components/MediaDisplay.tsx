@@ -28,11 +28,14 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
     mediaItemsCount: mediaItems.length,
     currentIndex,
     currentMedia: currentMedia ? currentMedia.type : 'none',
-    isLoading
+    isLoading,
+    autoPlay,
+    autoPlayEnabled
   });
 
   // 同步外部 autoPlay 状态
   useEffect(() => {
+    console.log('同步外部 autoPlay 状态:', autoPlay);
     setAutoPlayEnabled(autoPlay);
   }, [autoPlay]);
 
@@ -97,6 +100,7 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
   // 处理自动播放切换
   const handleAutoPlayToggle = () => {
     const newAutoPlay = !autoPlayEnabled;
+    console.log('切换自动播放状态:', autoPlayEnabled, '->', newAutoPlay);
     setAutoPlayEnabled(newAutoPlay);
     onAutoPlayChange?.(newAutoPlay);
   };
@@ -247,10 +251,10 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
       <div className="absolute top-4 left-4">
         <button
           onClick={handleAutoPlayToggle}
-          className={`px-3 py-1 rounded-full text-sm font-medium transition-all duration-200 ${
+          className={`px-3 py-1 rounded-full text-sm font-medium transition-all duration-200 transform hover:scale-105 ${
             autoPlayEnabled 
-              ? 'bg-green-500 text-white shadow-lg' 
-              : 'bg-white bg-opacity-20 text-white hover:bg-opacity-30'
+              ? 'bg-green-500 text-white shadow-lg hover:bg-green-600' 
+              : 'bg-white bg-opacity-20 text-white hover:bg-opacity-30 backdrop-blur-sm'
           }`}
         >
           {autoPlayEnabled ? '自动播放' : '手动切换'}
