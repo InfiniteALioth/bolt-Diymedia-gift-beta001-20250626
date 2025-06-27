@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useMediaStorage } from '../hooks/useMediaStorage';
-import { MediaItem, ChatMessage } from '../types';
+import { ChatMessage } from '../types';
 import MediaDisplay from './MediaDisplay';
 import ChatPanel from './ChatPanel';
 import MediaUpload from './MediaUpload';
@@ -49,39 +49,16 @@ const MediaPage: React.FC = () => {
     );
   }
 
-  const handleMediaUpload = (files: File[], caption: string) => {
+  const handleMediaUpload = async (files: File[], caption: string) => {
     console.log('开始处理媒体上传:', files.length, '个文件');
-    
-    const newMediaItems: MediaItem[] = [];
-    
-    files.forEach((file, index) => {
-      const url = URL.createObjectURL(file);
-      const mediaType = file.type.startsWith('image/') ? 'image' : 
-                       file.type.startsWith('video/') ? 'video' : 'audio';
-      
-      const mediaItem: MediaItem = {
-        id: 'media_' + Math.random().toString(36).substr(2, 9) + '_' + index,
-        type: mediaType,
-        url,
-        thumbnail: mediaType === 'image' ? url : undefined,
-        uploaderId: user.id,
-        uploaderName: user.username,
-        caption,
-        createdAt: new Date().toISOString(),
-        pageId,
-      };
-      
-      console.log('创建媒体项:', mediaItem);
-      newMediaItems.push(mediaItem);
-    });
-    
-    // 使用持久化存储添加媒体项
-    addMediaItems(newMediaItems);
     
     // 如果这是第一次上传，设置当前索引为0
     if (mediaItems.length === 0) {
       setCurrentMediaIndex(0);
     }
+    
+    // 直接传递文件到 useMediaStorage 钩子进行处理
+    await addMediaItems(files, user.username, caption, user.id, pageId);
     
     setShowUpload(false);
   };

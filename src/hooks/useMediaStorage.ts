@@ -17,7 +17,13 @@ const fileToDataURL = (file: File): Promise<string> => {
 };
 
 // Helper function to create MediaItem from File with Data URL
-const createMediaItemFromFile = async (file: File, uploaderName: string, caption: string): Promise<MediaItem> => {
+const createMediaItemFromFile = async (
+  file: File, 
+  uploaderName: string, 
+  caption: string, 
+  uploaderId: string, 
+  pageId: string
+): Promise<MediaItem> => {
   try {
     const dataURL = await fileToDataURL(file);
     
@@ -30,12 +36,13 @@ const createMediaItemFromFile = async (file: File, uploaderName: string, caption
     return {
       id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       type,
-      url: dataURL, // Use Data URL instead of blob URL
-      caption,
+      url: dataURL, // Use Data URL for persistence
+      thumbnail: type === 'image' ? dataURL : undefined,
+      uploaderId,
       uploaderName,
-      timestamp: Date.now(),
-      fileName: file.name,
-      fileSize: file.size
+      caption,
+      createdAt: new Date().toISOString(),
+      pageId
     };
   } catch (error) {
     console.error('Failed to create media item from file:', error);
@@ -87,15 +94,21 @@ export function useMediaStorage(pageId: string) {
     }
   }, [storageKey]);
 
-  // 添加媒体项 - 现在接受 File 数组并转换为 Data URL
-  const addMediaItems = useCallback(async (files: File[], uploaderName: string, caption: string) => {
+  // 添加媒体项 - 接受 File 数组并转换为 Data URL
+  const addMediaItems = useCallback(async (
+    files: File[], 
+    uploaderName: string, 
+    caption: string, 
+    uploaderId: string, 
+    pageId: string
+  ) => {
     try {
       console.log('开始处理文件:', files.length);
       const newItems: MediaItem[] = [];
       
       for (const file of files) {
         try {
-          const mediaItem = await createMediaItemFromFile(file, uploaderName, caption);
+          const mediaItem = await createMediaItemFromFile(file, uploaderName, caption, uploaderId, pageId);
           newItems.push(mediaItem);
           console.log('文件处理完成:', file.name, '-> Data URL长度:', mediaItem.url.length);
         } catch (error) {
