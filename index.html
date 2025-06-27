@@ -11,225 +11,385 @@
     <meta name="msapplication-tap-highlight" content="no" />
     <title>互动媒体展示平台</title>
     <style>
-      /* 基础重置和移动端优化 */
+      /* 强制重置所有样式 */
       * {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
+        margin: 0 !important;
+        padding: 0 !important;
+        box-sizing: border-box !important;
       }
       
-      html, body {
-        width: 100%;
-        height: 100%;
-        overflow: hidden;
-        touch-action: manipulation;
-        -webkit-user-select: none;
-        -webkit-touch-callout: none;
-        -webkit-tap-highlight-color: transparent;
-        background-color: #000;
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      html {
+        width: 100% !important;
+        height: 100% !important;
+        overflow: hidden !important;
+        background-color: #000 !important;
+        -webkit-text-size-adjust: 100% !important;
+        -ms-text-size-adjust: 100% !important;
       }
       
-      /* 修复移动端视口问题 */
+      body {
+        width: 100% !important;
+        height: 100% !important;
+        overflow: hidden !important;
+        background-color: #000 !important;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        touch-action: manipulation !important;
+        -webkit-user-select: none !important;
+        -webkit-touch-callout: none !important;
+        -webkit-tap-highlight-color: transparent !important;
+        -webkit-overflow-scrolling: touch !important;
+      }
+      
       #root {
-        width: 100vw;
-        height: 100vh;
-        position: fixed;
-        top: 0;
-        left: 0;
-        overflow: hidden;
-        background-color: #000;
+        width: 100vw !important;
+        height: 100vh !important;
+        height: -webkit-fill-available !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        overflow: hidden !important;
+        background-color: #000 !important;
+        z-index: 1 !important;
       }
 
-      /* 移动端特定样式 */
+      /* 移动端强制样式 */
       @media screen and (max-width: 768px) {
-        html {
-          -webkit-text-size-adjust: 100%;
-          -ms-text-size-adjust: 100%;
+        html, body {
+          position: fixed !important;
+          width: 100% !important;
+          height: 100% !important;
+          overflow: hidden !important;
         }
         
-        body {
-          -webkit-overflow-scrolling: touch;
-          position: fixed;
-          width: 100%;
-          height: 100%;
-        }
-        
-        /* 防止移动端地址栏影响 */
         #root {
-          height: 100vh;
-          height: -webkit-fill-available;
+          height: 100vh !important;
+          height: -webkit-fill-available !important;
+          min-height: 100vh !important;
+          min-height: -webkit-fill-available !important;
         }
       }
 
       /* iOS Safari 特殊处理 */
       @supports (-webkit-touch-callout: none) {
         #root {
-          height: -webkit-fill-available;
+          height: -webkit-fill-available !important;
+          min-height: -webkit-fill-available !important;
         }
       }
 
-      /* 加载动画 */
+      /* 应用加载状态 */
+      .app-loading {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        background-color: #1a1a1a !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        color: white !important;
+        font-family: system-ui, -apple-system, sans-serif !important;
+        z-index: 9999 !important;
+        flex-direction: column !important;
+      }
+      
       .loading-spinner {
-        border: 2px solid #333;
-        border-top: 2px solid #007bff;
-        border-radius: 50%;
-        width: 40px;
-        height: 40px;
-        animation: spin 1s linear infinite;
-        margin: 20px auto;
+        border: 3px solid #333 !important;
+        border-top: 3px solid #007bff !important;
+        border-radius: 50% !important;
+        width: 50px !important;
+        height: 50px !important;
+        animation: spin 1s linear infinite !important;
+        margin: 20px auto !important;
       }
 
       @keyframes spin {
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
       }
-
-      /* 确保页面在加载时不会闪烁 */
-      .app-loading {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: #000;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-family: system-ui, -apple-system, sans-serif;
-        z-index: 9999;
-        flex-direction: column;
-      }
       
       .loading-text {
-        margin-top: 20px;
-        font-size: 16px;
-        text-align: center;
+        margin-top: 20px !important;
+        font-size: 18px !important;
+        text-align: center !important;
+        color: white !important;
+      }
+      
+      .loading-details {
+        margin-top: 15px !important;
+        font-size: 14px !important;
+        text-align: center !important;
+        color: #ccc !important;
+        max-width: 300px !important;
+        line-height: 1.4 !important;
       }
       
       /* 移动端调试信息 */
       .mobile-debug {
-        position: fixed;
-        bottom: 20px;
-        left: 20px;
-        right: 20px;
-        background: rgba(0, 123, 255, 0.9);
-        color: white;
-        padding: 10px;
-        border-radius: 8px;
-        font-size: 12px;
-        z-index: 10000;
-        display: none;
+        position: fixed !important;
+        bottom: 20px !important;
+        left: 20px !important;
+        right: 20px !important;
+        background: rgba(0, 123, 255, 0.95) !important;
+        color: white !important;
+        padding: 15px !important;
+        border-radius: 10px !important;
+        font-size: 12px !important;
+        z-index: 10000 !important;
+        display: none !important;
+        font-family: monospace !important;
+        line-height: 1.3 !important;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
       }
       
       @media screen and (max-width: 768px) {
         .mobile-debug {
-          display: block;
+          display: block !important;
         }
+      }
+
+      /* 错误显示 */
+      .error-display {
+        position: fixed !important;
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        background: rgba(220, 38, 38, 0.95) !important;
+        color: white !important;
+        padding: 20px !important;
+        border-radius: 15px !important;
+        z-index: 10001 !important;
+        max-width: 90% !important;
+        text-align: center !important;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+      }
+
+      .error-button {
+        margin-top: 15px !important;
+        padding: 10px 20px !important;
+        background: white !important;
+        color: #dc2626 !important;
+        border: none !important;
+        border-radius: 8px !important;
+        cursor: pointer !important;
+        font-weight: bold !important;
       }
     </style>
   </head>
   <body>
     <div id="root">
       <!-- 加载占位符 -->
-      <div class="app-loading">
+      <div class="app-loading" id="app-loading">
         <div class="loading-spinner"></div>
         <div class="loading-text">
-          <p>正在加载应用...</p>
-          <p style="font-size: 12px; margin-top: 10px; opacity: 0.7;">
-            如果长时间无响应，请刷新页面
-          </p>
+          正在启动应用...
+        </div>
+        <div class="loading-details">
+          正在初始化移动端兼容性设置<br>
+          如果长时间无响应，请尝试刷新页面
         </div>
       </div>
       
       <!-- 移动端调试信息 -->
       <div class="mobile-debug" id="mobile-debug">
-        <div>移动端检测中...</div>
+        <div><strong>移动端调试信息</strong></div>
+        <div id="debug-content">正在检测设备信息...</div>
       </div>
     </div>
     
-    <script type="module" src="/src/main.tsx"></script>
-    
-    <!-- 移动端兼容性脚本 -->
+    <!-- 移动端兼容性脚本 - 必须在React之前执行 -->
     <script>
+      console.log('=== 移动端兼容性脚本开始执行 ===');
+      
       // 立即执行的移动端检测和优化
       (function() {
+        const startTime = Date.now();
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         const isSmallScreen = window.innerWidth <= 768;
         const debugElement = document.getElementById('mobile-debug');
+        const debugContent = document.getElementById('debug-content');
+        
+        console.log('设备检测结果:', { isMobile, isSmallScreen, userAgent: navigator.userAgent });
+        
+        // 更新调试信息
+        function updateDebugInfo(info) {
+          if (debugContent) {
+            debugContent.innerHTML = info;
+          }
+          console.log('调试信息:', info);
+        }
         
         if (isMobile || isSmallScreen) {
-          console.log('移动端设备检测成功');
+          updateDebugInfo(`
+            <div>✅ 移动端模式激活</div>
+            <div>📱 屏幕: ${window.innerWidth}x${window.innerHeight}</div>
+            <div>🌐 浏览器: ${navigator.userAgent.split(' ')[0]}</div>
+            <div>⏰ 启动时间: ${new Date().toLocaleTimeString()}</div>
+            <div>🔧 正在应用移动端优化...</div>
+          `);
           
-          // 更新调试信息
-          if (debugElement) {
-            debugElement.innerHTML = `
-              <div>移动端模式 | ${window.innerWidth}x${window.innerHeight}</div>
-              <div>UA: ${navigator.userAgent.substring(0, 30)}...</div>
-              <div>时间: ${new Date().toLocaleTimeString()}</div>
+          // 强制设置移动端样式
+          document.documentElement.style.cssText = `
+            width: 100% !important;
+            height: 100% !important;
+            overflow: hidden !important;
+            position: fixed !important;
+            background: #000 !important;
+          `;
+          
+          document.body.style.cssText = `
+            width: 100% !important;
+            height: 100% !important;
+            overflow: hidden !important;
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            background: #000 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          `;
+          
+          const rootElement = document.getElementById('root');
+          if (rootElement) {
+            rootElement.style.cssText = `
+              width: 100vw !important;
+              height: 100vh !important;
+              height: -webkit-fill-available !important;
+              position: fixed !important;
+              top: 0 !important;
+              left: 0 !important;
+              overflow: hidden !important;
+              background: #000 !important;
+              z-index: 1 !important;
             `;
           }
           
-          // 防止移动端缩放
+          // 防止移动端缩放和滚动
           document.addEventListener('touchstart', function(e) {
             if (e.touches.length > 1) {
               e.preventDefault();
             }
           }, { passive: false });
           
+          document.addEventListener('touchmove', function(e) {
+            e.preventDefault();
+          }, { passive: false });
+          
           // 防止双击缩放
           let lastTouchEnd = 0;
           document.addEventListener('touchend', function(e) {
-            const now = (new Date()).getTime();
+            const now = Date.now();
             if (now - lastTouchEnd <= 300) {
               e.preventDefault();
             }
             lastTouchEnd = now;
           }, false);
           
-          // 设置body样式
-          document.body.style.position = 'fixed';
-          document.body.style.width = '100%';
-          document.body.style.height = '100%';
-          document.body.style.overflow = 'hidden';
+          // 防止长按菜单
+          document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+          }, false);
           
-          console.log('移动端优化应用完成');
+          updateDebugInfo(`
+            <div>✅ 移动端优化完成</div>
+            <div>📱 屏幕: ${window.innerWidth}x${window.innerHeight}</div>
+            <div>🌐 浏览器: ${navigator.userAgent.split(' ')[0]}</div>
+            <div>⏰ 耗时: ${Date.now() - startTime}ms</div>
+            <div>🚀 等待React应用加载...</div>
+          `);
+          
+          console.log('移动端优化应用完成，耗时:', Date.now() - startTime, 'ms');
         } else {
           // 桌面端隐藏调试信息
           if (debugElement) {
             debugElement.style.display = 'none';
           }
+          console.log('桌面端模式，跳过移动端优化');
         }
         
         // 全局错误处理
+        function showError(message, error) {
+          console.error('页面错误:', message, error);
+          
+          const errorDiv = document.createElement('div');
+          errorDiv.className = 'error-display';
+          errorDiv.innerHTML = `
+            <h3>⚠️ 应用启动失败</h3>
+            <p>${message}</p>
+            <p style="font-size: 12px; margin-top: 10px; opacity: 0.8;">
+              错误详情: ${error ? error.toString() : '未知错误'}
+            </p>
+            <button class="error-button" onclick="location.reload()">
+              🔄 重新加载
+            </button>
+          `;
+          document.body.appendChild(errorDiv);
+          
+          if (debugContent && (isMobile || isSmallScreen)) {
+            updateDebugInfo(`
+              <div>❌ 应用启动失败</div>
+              <div>📱 屏幕: ${window.innerWidth}x${window.innerHeight}</div>
+              <div>🌐 浏览器: ${navigator.userAgent.split(' ')[0]}</div>
+              <div>⚠️ 错误: ${message}</div>
+              <div>🔧 详情: ${error ? error.toString().substring(0, 50) : '未知'}...</div>
+            `);
+          }
+        }
+        
         window.addEventListener('error', function(e) {
-          console.error('页面错误:', e.error);
-          if (debugElement && (isMobile || isSmallScreen)) {
-            debugElement.innerHTML += `<div style="color: #ff6b6b;">错误: ${e.message}</div>`;
-          }
+          showError('JavaScript执行错误', e.error || e.message);
         });
         
-        // Promise错误处理
         window.addEventListener('unhandledrejection', function(e) {
-          console.error('Promise错误:', e.reason);
-          if (debugElement && (isMobile || isSmallScreen)) {
-            debugElement.innerHTML += `<div style="color: #ff6b6b;">Promise错误: ${e.reason}</div>`;
-          }
+          showError('Promise执行错误', e.reason);
         });
         
-        // 监听应用加载完成
-        setTimeout(() => {
-          const loadingElement = document.querySelector('.app-loading');
+        // 监听应用加载状态
+        let loadingTimeout = setTimeout(() => {
+          const loadingElement = document.getElementById('app-loading');
           if (loadingElement && loadingElement.style.display !== 'none') {
             console.warn('应用加载超时');
-            if (debugElement && (isMobile || isSmallScreen)) {
-              debugElement.innerHTML += `<div style="color: #ffa500;">警告: 应用加载超时</div>`;
-            }
+            showError('应用加载超时', '请检查网络连接或尝试刷新页面');
           }
-        }, 10000);
+        }, 15000); // 15秒超时
         
+        // 清除超时定时器的函数
+        window.clearLoadingTimeout = function() {
+          if (loadingTimeout) {
+            clearTimeout(loadingTimeout);
+            loadingTimeout = null;
+          }
+        };
+        
+        // 应用加载成功的回调
+        window.onAppLoaded = function() {
+          console.log('React应用加载成功');
+          window.clearLoadingTimeout();
+          
+          const loadingElement = document.getElementById('app-loading');
+          if (loadingElement) {
+            loadingElement.style.display = 'none';
+          }
+          
+          if (debugContent && (isMobile || isSmallScreen)) {
+            updateDebugInfo(`
+              <div>✅ 应用启动成功</div>
+              <div>📱 屏幕: ${window.innerWidth}x${window.innerHeight}</div>
+              <div>🌐 浏览器: ${navigator.userAgent.split(' ')[0]}</div>
+              <div>⏰ 总耗时: ${Date.now() - startTime}ms</div>
+              <div>🎉 应用正常运行中</div>
+            `);
+          }
+        };
+        
+        console.log('=== 移动端兼容性脚本执行完成 ===');
       })();
     </script>
+    
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
