@@ -1,3 +1,62 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* 移动端优化样式 */
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
+  }
+  
+  body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* 移动端触摸优化 */
+@layer utilities {
+  .touch-manipulation {
+    touch-action: manipulation;
+  }
+  
+  .no-tap-highlight {
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  .no-select {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+}
+
+/* 移动端特定样式 */
+@media screen and (max-width: 768px) {
+  /* 确保移动端正确显示 */
+  .mobile-full-height {
+    height: 100vh;
+    height: -webkit-fill-available;
+  }
+  
+  /* 移动端按钮优化 */
+  button {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  
+  /* 移动端输入框优化 */
+  input, textarea {
+    -webkit-appearance: none;
+    border-radius: 0;
+  }
+}
+
+/* 修复移动端视口问题 */
+@supports (-webkit-touch-callout: none) {
+  .mobile-viewport-fix {
+    height: -webkit-fill-available;
+  }
+}

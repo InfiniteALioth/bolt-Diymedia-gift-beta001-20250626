@@ -18,13 +18,15 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [failedMedia, setFailedMedia] = useState<Set<string>>(new Set());
+  const [isLoading, setIsLoading] = useState(true);
 
   const currentMedia = mediaItems[currentIndex];
 
   console.log('MediaDisplay 渲染:', {
     mediaItemsCount: mediaItems.length,
     currentIndex,
-    currentMedia: currentMedia ? currentMedia.type : 'none'
+    currentMedia: currentMedia ? currentMedia.type : 'none',
+    isLoading
   });
 
   useEffect(() => {
@@ -36,6 +38,13 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
 
     return () => clearInterval(interval);
   }, [currentIndex, mediaItems.length, autoPlay, onIndexChange]);
+
+  useEffect(() => {
+    // 当媒体项改变时重置加载状态
+    setIsLoading(true);
+    const timer = setTimeout(() => setIsLoading(false), 1000);
+    return () => clearTimeout(timer);
+  }, [currentMedia?.id]);
 
   const handlePrevious = () => {
     if (mediaItems.length === 0) return;
@@ -52,6 +61,7 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
   const handleMediaError = (mediaId: string) => {
     console.error('媒体加载失败:', mediaId);
     setFailedMedia(prev => new Set([...prev, mediaId]));
+    setIsLoading(false);
   };
 
   const handleRetryMedia = (mediaId: string) => {
@@ -60,6 +70,12 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
       newSet.delete(mediaId);
       return newSet;
     });
+    setIsLoading(true);
+  };
+
+  const handleMediaLoad = () => {
+    console.log('媒体加载成功');
+    setIsLoading(false);
   };
 
   const isMediaFailed = (mediaId: string) => failedMedia.has(mediaId);
@@ -72,7 +88,14 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
             <Play className="h-8 w-8" />
           </div>
           <h3 className="text-xl font-semibold mb-2">暂无媒体内容</h3>
-          <p className="text-gray-300">点击右上角的上传按钮开始分享</p>
+          <p className="text-gray-300 mb-4">点击右上角的上传按钮开始分享</p>
+          
+          {/* 移动端提示 */}
+          <div className="mt-4 p-3 bg-blue-500 bg-opacity-20 rounded-lg md:hidden">
+            <p className="text-sm text-blue-200">
+              移动端用户：请确保浏览器支持文件上传功能
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -85,6 +108,7 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
         <div className="text-center text-white px-4">
           <h3 className="text-xl font-semibold mb-2">媒体加载中...</h3>
           <p className="text-gray-300">请稍候</p>
+          <div className="mt-4 w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto"></div>
         </div>
       </div>
     );
@@ -109,11 +133,23 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
     </div>
   );
 
+  const LoadingSpinner = () => (
+    <div className="w-full max-w-md p-8 mx-4 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl shadow-2xl text-center">
+      <div className="w-20 h-20 bg-white bg-opacity-20 rounded-full flex items-center justify-center mx-auto mb-4">
+        <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+      </div>
+      <h3 className="text-xl font-semibold text-white mb-2">正在加载媒体</h3>
+      <p className="text-white text-opacity-80">请稍候...</p>
+    </div>
+  );
+
   return (
     <div className="w-full h-screen bg-black overflow-hidden relative">
       {/* Media Content */}
       <div className="absolute inset-0 flex items-center justify-center">
-        {isMediaFailed(currentMedia.id) ? (
+        {isLoading ? (
+          <LoadingSpinner />
+        ) : isMediaFailed(currentMedia.id) ? (
           <MediaErrorFallback 
             mediaId={currentMedia.id} 
             onRetry={() => handleRetryMedia(currentMedia.id)} 
@@ -123,11 +159,17 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
             {currentMedia.type === 'image' && (
               <img
                 src={currentMedia.url}
-                alt={currentMedia.caption}
+                alt={currentMedia.caption || '图片'}
                 className="max-w-full max-h-full object-contain"
-                style={{ maxWidth: '100vw', maxHeight: '100vh' }}
-                onLoad={() => console.log('图片加载完成:', currentMedia.url)}
+                style={{ 
+                  maxWidth: '100vw', 
+                  maxHeight: '100vh',
+                  width: 'auto',
+                  height: 'auto'
+                }}
+                onLoad={handleMediaLoad}
                 onError={() => handleMediaError(currentMedia.id)}
+                loading="eager"
               />
             )}
             
@@ -135,13 +177,19 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
               <video
                 src={currentMedia.url}
                 className="max-w-full max-h-full object-contain"
-                style={{ maxWidth: '100vw', maxHeight: '100vh' }}
+                style={{ 
+                  maxWidth: '100vw', 
+                  maxHeight: '100vh',
+                  width: 'auto',
+                  height: 'auto'
+                }}
                 autoPlay={autoPlay}
                 muted={isMuted}
                 loop
                 playsInline
                 controls
-                onLoadedData={() => console.log('视频加载完成:', currentMedia.url)}
+                preload="metadata"
+                onLoadedData={handleMediaLoad}
                 onError={() => handleMediaError(currentMedia.id)}
               />
             )}
@@ -161,7 +209,8 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
                   controls
                   autoPlay={autoPlay}
                   muted={isMuted}
-                  onLoadedData={() => console.log('音频加载完成:', currentMedia.url)}
+                  preload="metadata"
+                  onLoadedData={handleMediaLoad}
                   onError={() => handleMediaError(currentMedia.id)}
                 />
               </div>
@@ -171,7 +220,7 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
       </div>
 
       {/* Media Info Overlay */}
-      <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black from-opacity-60 to-transparent p-6 pt-20">
+      <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/60 to-transparent p-6 pt-20">
         <div className="text-center text-white px-4">
           <p className="text-lg font-medium">
             {currentMedia.caption && `"${currentMedia.caption}" - `}
@@ -185,14 +234,14 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
         <div className="absolute right-4 top-1/2 transform -translate-y-1/2 flex flex-col space-y-4">
           <button
             onClick={handlePrevious}
-            className="w-12 h-12 bg-white bg-opacity-20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-opacity-30 transition-all duration-200"
+            className="w-12 h-12 bg-white bg-opacity-20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-opacity-30 transition-all duration-200 active:scale-95"
           >
             <ChevronUp className="h-6 w-6" />
           </button>
           
           <button
             onClick={handleNext}
-            className="w-12 h-12 bg-white bg-opacity-20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-opacity-30 transition-all duration-200"
+            className="w-12 h-12 bg-white bg-opacity-20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-opacity-30 transition-all duration-200 active:scale-95"
           >
             <ChevronDown className="h-6 w-6" />
           </button>
@@ -204,14 +253,14 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
         <div className="absolute bottom-20 right-4 flex flex-col space-y-2">
           <button
             onClick={() => setIsPlaying(!isPlaying)}
-            className="w-12 h-12 bg-white bg-opacity-20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-opacity-30 transition-all duration-200"
+            className="w-12 h-12 bg-white bg-opacity-20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-opacity-30 transition-all duration-200 active:scale-95"
           >
             {isPlaying ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6" />}
           </button>
           
           <button
             onClick={() => setIsMuted(!isMuted)}
-            className="w-12 h-12 bg-white bg-opacity-20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-opacity-30 transition-all duration-200"
+            className="w-12 h-12 bg-white bg-opacity-20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-opacity-30 transition-all duration-200 active:scale-95"
           >
             {isMuted ? <VolumeX className="h-6 w-6" /> : <Volume2 className="h-6 w-6" />}
           </button>
