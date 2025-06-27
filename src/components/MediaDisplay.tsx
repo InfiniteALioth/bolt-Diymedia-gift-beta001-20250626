@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MediaItem } from '../types';
-import { Play, ChevronUp, ChevronDown, AlertCircle, RefreshCw, Volume2, Plus, Minus, Upload } from 'lucide-react';
+import { Play, ChevronUp, ChevronDown, AlertCircle, RefreshCw, Volume2, Plus, Minus } from 'lucide-react';
 import VideoPlayer from './VideoPlayer';
 
 interface MediaDisplayProps {
@@ -298,14 +298,6 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
           <span>{autoPlay ? '自动播放' : '手动切换'}</span>
         </button>
       </div>
-
-      {/* Upload Button */}
-      <button
-        onClick={onAddMedia}
-        className="absolute top-4 right-4 z-40 w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 rounded-full flex items-center justify-center text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
-      >
-        <Upload className="h-6 w-6" />
-      </button>
 
       {/* Media Control Buttons - 移动到进度条上方2px */}
       <div className="absolute bottom-20 right-4 z-50">
