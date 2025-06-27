@@ -14,7 +14,6 @@ const MediaPage: React.FC = () => {
   const [showUpload, setShowUpload] = useState(false);
   const [showUserEdit, setShowUserEdit] = useState(false);
   const [autoPlay, setAutoPlay] = useState(true);
-  const [debugInfo, setDebugInfo] = useState<string>('');
 
   // Mock page ID - in real app this would come from URL params
   const pageId = 'page_demo';
@@ -29,20 +28,6 @@ const MediaPage: React.FC = () => {
     addChatMessage,
     clearAllData
   } = useMediaStorage(pageId);
-
-  // 添加调试信息
-  useEffect(() => {
-    const info = [
-      `用户: ${user ? user.username : '未设置'}`,
-      `媒体数量: ${mediaItems.length}`,
-      `消息数量: ${chatMessages.length}`,
-      `数据已加载: ${isLoaded}`,
-      `当前索引: ${currentMediaIndex}`,
-      `屏幕尺寸: ${window.innerWidth}x${window.innerHeight}`,
-      `用户代理: ${navigator.userAgent.substring(0, 50)}...`
-    ].join('\n');
-    setDebugInfo(info);
-  }, [user, mediaItems.length, chatMessages.length, isLoaded, currentMediaIndex]);
 
   // Handle first-time user setup
   if (!user) {
@@ -59,11 +44,6 @@ const MediaPage: React.FC = () => {
           </div>
           <h3 className="text-xl font-semibold mb-2">加载中...</h3>
           <p className="text-gray-300 mb-4">正在加载媒体内容</p>
-          
-          {/* 调试信息 */}
-          <div className="mt-4 p-3 bg-black bg-opacity-50 rounded-lg text-left">
-            <p className="text-xs text-gray-400 whitespace-pre-line">{debugInfo}</p>
-          </div>
         </div>
       </div>
     );
@@ -116,14 +96,9 @@ const MediaPage: React.FC = () => {
 
   return (
     <div className="w-full h-screen bg-black overflow-hidden relative">
-      {/* 移动端兼容性检测 */}
-      <div className="absolute top-0 left-0 z-50 p-2 bg-red-500 text-white text-xs opacity-75 md:hidden">
-        移动端模式 | {window.innerWidth}x{window.innerHeight}
-      </div>
-
       {/* Header */}
       <div className="absolute top-0 left-0 right-0 z-40 bg-gradient-to-b from-black/50 to-transparent">
-        <div className="flex items-center justify-between p-4 pt-8">
+        <div className="flex items-center justify-between p-4">
           <div className="flex items-center space-x-3">
             <button
               onClick={() => setAutoPlay(!autoPlay)}
@@ -190,11 +165,6 @@ const MediaPage: React.FC = () => {
         currentUsername={user.username}
         onSendMessage={handleSendMessage}
       />
-
-      {/* Debug Panel - 仅在移动端显示 */}
-      <div className="absolute bottom-4 left-4 z-50 p-3 bg-black bg-opacity-75 rounded-lg text-white text-xs max-w-xs md:hidden">
-        <div className="whitespace-pre-line">{debugInfo}</div>
-      </div>
 
       {/* Modals */}
       {showUpload && (
