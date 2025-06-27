@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { MediaPage, Admin } from '../../types';
-import { Plus, ExternalLink, QrCode, Settings, Trash2, Calendar, Database, Users } from 'lucide-react';
+import { Plus, ExternalLink, QrCode, Settings, Trash2, Calendar, Database, Users, Copy, Check } from 'lucide-react';
 import MediaPageEditor from './MediaPageEditor';
 
 interface MediaPagesListProps {
@@ -46,6 +46,7 @@ const MediaPagesList: React.FC<MediaPagesListProps> = ({ admin }) => {
 
   const [showEditor, setShowEditor] = useState(false);
   const [editingPage, setEditingPage] = useState<MediaPage | null>(null);
+  const [copiedLinks, setCopiedLinks] = useState<Set<string>>(new Set());
 
   const handleCreatePage = () => {
     setEditingPage(null);
@@ -102,6 +103,59 @@ const MediaPagesList: React.FC<MediaPagesListProps> = ({ admin }) => {
     }
   };
 
+  const handleOpenLink = (url: string) => {
+    // 尝试多种方式打开链接，提高移动端兼容性
+    try {
+      // 方法1: 直接赋值给 window.location（在同一标签页打开）
+      if (window.innerWidth <= 768) { // 移动端设备
+        window.location.href = url;
+      } else {
+        // 桌面端尝试新标签页
+        const newWindow = window.open(url, '_blank', 'noopener,noreferrer');
+        if (!newWindow) {
+          // 如果弹窗被阻止，回退到同一标签页
+          window.location.href = url;
+        }
+      }
+    } catch (error) {
+      console.error('打开链接失败:', error);
+      // 最后的回退方案
+      window.location.href = url;
+    }
+  };
+
+  const handleCopyLink = async (url: string, pageId: string) => {
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        // 回退方案：创建临时文本区域
+        const textArea = document.createElement('textarea');
+        textArea.value = url;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        textArea.remove();
+      }
+      
+      setCopiedLinks(prev => new Set([...prev, pageId]));
+      setTimeout(() => {
+        setCopiedLinks(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(pageId);
+          return newSet;
+        });
+      }, 2000);
+    } catch (error) {
+      console.error('复制链接失败:', error);
+      alert('复制失败，请手动复制链接');
+    }
+  };
+
   const formatFileSize = (sizeInMB: number) => {
     if (sizeInMB >= 1024) {
       return `${(sizeInMB / 1024).toFixed(1)} GB`;
@@ -150,7 +204,7 @@ const MediaPagesList: React.FC<MediaPagesListProps> = ({ admin }) => {
                     <Settings className="h-4 w-4" />
                   </button>
                   <button
-                    onClick={() => window.open(page.uniqueLink, '_blank')}
+                    onClick={() => handleOpenLink(page.uniqueLink)}
                     className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all duration-200"
                     title="访问页面"
                   >
@@ -207,14 +261,39 @@ const MediaPagesList: React.FC<MediaPagesListProps> = ({ admin }) => {
                   <QrCode className="h-3 w-3" />
                   <span>二维码</span>
                 </button>
-                <a
-                  href={page.uniqueLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-blue-600 hover:text-blue-800 font-medium"
-                >
-                  {page.uniqueLink}
-                </a>
+                
+                {/* 链接显示和操作区域 */}
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => handleCopyLink(page.uniqueLink, page.id)}
+                    className={`flex items-center space-x-1 px-3 py-1 text-xs rounded-md transition-all duration-200 ${
+                      copiedLinks.has(page.id)
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                    }`}
+                    title="复制链接"
+                  >
+                    {copiedLinks.has(page.id) ? (
+                      <>
+                        <Check className="h-3 w-3" />
+                        <span>已复制</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-3 w-3" />
+                        <span>复制链接</span>
+                      </>
+                    )}
+                  </button>
+                  
+                  <button
+                    onClick={() => handleOpenLink(page.uniqueLink)}
+                    className="text-xs text-blue-600 hover:text-blue-800 font-medium px-2 py-1 hover:bg-blue-50 rounded transition-all duration-200"
+                    title="点击访问页面"
+                  >
+                    访问页面
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -232,6 +311,13 @@ const MediaPagesList: React.FC<MediaPagesListProps> = ({ admin }) => {
                   }}
                 />
               </div>
+            </div>
+
+            {/* 移动端友好提示 */}
+            <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg md:hidden">
+              <p className="text-xs text-blue-800">
+                <strong>移动端提示：</strong>点击"访问页面"将在当前标签页打开链接。您也可以使用"复制链接"功能将链接分享给他人。
+              </p>
             </div>
           </div>
         ))}
