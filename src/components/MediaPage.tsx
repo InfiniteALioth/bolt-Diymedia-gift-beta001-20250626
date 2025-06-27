@@ -82,6 +82,22 @@ const MediaPage: React.FC = () => {
     setShowUserEdit(false);
   };
 
+  const handleDeleteCurrentMedia = () => {
+    if (mediaItems.length > 0 && currentMediaIndex < mediaItems.length) {
+      const currentMedia = mediaItems[currentMediaIndex];
+      removeMediaItem(currentMedia.id);
+      
+      // 调整当前索引
+      if (currentMediaIndex >= mediaItems.length - 1) {
+        setCurrentMediaIndex(Math.max(0, mediaItems.length - 2));
+      }
+    }
+  };
+
+  const handlePauseAutoPlay = () => {
+    setAutoPlay(false);
+  };
+
   // 调试信息
   console.log('当前媒体项数量:', mediaItems.length);
   console.log('当前媒体索引:', currentMediaIndex);
@@ -124,6 +140,10 @@ const MediaPage: React.FC = () => {
         messages={chatMessages}
         currentUsername={user.username}
         onSendMessage={handleSendMessage}
+        onAddMedia={() => setShowUpload(true)}
+        onDeleteCurrentMedia={handleDeleteCurrentMedia}
+        onPauseAutoPlay={handlePauseAutoPlay}
+        hasCurrentMedia={mediaItems.length > 0}
       />
 
       {/* Modals */}

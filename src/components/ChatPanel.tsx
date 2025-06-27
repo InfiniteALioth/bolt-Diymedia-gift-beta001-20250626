@@ -1,17 +1,25 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChatMessage } from '../types';
-import { Send, ChevronUp, ChevronDown } from 'lucide-react';
+import { Send, ChevronUp, ChevronDown, Plus, Minus } from 'lucide-react';
 
 interface ChatPanelProps {
   messages: ChatMessage[];
   currentUsername: string;
   onSendMessage: (content: string) => void;
+  onAddMedia?: () => void;
+  onDeleteCurrentMedia?: () => void;
+  onPauseAutoPlay?: () => void;
+  hasCurrentMedia?: boolean;
 }
 
 const ChatPanel: React.FC<ChatPanelProps> = ({
   messages,
   currentUsername,
-  onSendMessage
+  onSendMessage,
+  onAddMedia,
+  onDeleteCurrentMedia,
+  onPauseAutoPlay,
+  hasCurrentMedia = false
 }) => {
   const [inputValue, setInputValue] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -50,6 +58,19 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
   const scrollDown = () => {
     if (messagesContainerRef.current) {
       messagesContainerRef.current.scrollBy({ top: 60, behavior: 'smooth' });
+    }
+  };
+
+  const handleDeleteMedia = () => {
+    if (!hasCurrentMedia) return;
+    
+    // 暂停自动播放
+    onPauseAutoPlay?.();
+    
+    // 询问用户确认删除
+    const confirmed = confirm('确定要删除当前显示的媒体吗？此操作不可恢复。');
+    if (confirmed && onDeleteCurrentMedia) {
+      onDeleteCurrentMedia();
     }
   };
 
@@ -116,6 +137,34 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
             </div>
           ))}
           <div ref={messagesEndRef} />
+        </div>
+      </div>
+
+      {/* Media Control Buttons - 在输入框上方 */}
+      <div className="flex justify-end mb-3">
+        <div className="flex space-x-2">
+          {/* 删除当前媒体按钮 (-) */}
+          <button
+            onClick={handleDeleteMedia}
+            disabled={!hasCurrentMedia}
+            className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 ${
+              hasCurrentMedia
+                ? 'bg-red-500/80 hover:bg-red-600/90 text-white shadow-lg hover:shadow-xl'
+                : 'bg-gray-600/50 text-gray-400 cursor-not-allowed'
+            }`}
+            title={hasCurrentMedia ? "删除当前媒体" : "无媒体可删除"}
+          >
+            <Minus className="h-4 w-4" />
+          </button>
+          
+          {/* 添加媒体按钮 (+) */}
+          <button
+            onClick={onAddMedia}
+            className="w-8 h-8 bg-gradient-to-r from-blue-500/80 to-purple-600/80 hover:from-blue-600/90 hover:to-purple-700/90 rounded-full flex items-center justify-center text-white transition-all duration-200 shadow-lg hover:shadow-xl"
+            title="添加媒体"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
         </div>
       </div>
 
