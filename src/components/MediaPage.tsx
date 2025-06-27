@@ -98,6 +98,10 @@ const MediaPage: React.FC = () => {
     setAutoPlay(false);
   };
 
+  const handleAutoPlayChange = (newAutoPlay: boolean) => {
+    setAutoPlay(newAutoPlay);
+  };
+
   // 调试信息
   console.log('当前媒体项数量:', mediaItems.length);
   console.log('当前媒体索引:', currentMediaIndex);
@@ -125,6 +129,7 @@ const MediaPage: React.FC = () => {
         currentIndex={currentMediaIndex}
         onIndexChange={setCurrentMediaIndex}
         autoPlay={autoPlay}
+        onAutoPlayChange={handleAutoPlayChange}
       />
 
       {/* Upload Button */}

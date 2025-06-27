@@ -8,13 +8,15 @@ interface MediaDisplayProps {
   currentIndex: number;
   onIndexChange: (index: number) => void;
   autoPlay: boolean;
+  onAutoPlayChange?: (autoPlay: boolean) => void;
 }
 
 const MediaDisplay: React.FC<MediaDisplayProps> = ({
   mediaItems,
   currentIndex,
   onIndexChange,
-  autoPlay
+  autoPlay,
+  onAutoPlayChange
 }) => {
   const [failedMedia, setFailedMedia] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
@@ -28,6 +30,11 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
     currentMedia: currentMedia ? currentMedia.type : 'none',
     isLoading
   });
+
+  // 同步外部 autoPlay 状态
+  useEffect(() => {
+    setAutoPlayEnabled(autoPlay);
+  }, [autoPlay]);
 
   useEffect(() => {
     if (!autoPlayEnabled || mediaItems.length <= 1) return;
@@ -85,6 +92,13 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
         handleNext();
       }, 3000);
     }
+  };
+
+  // 处理自动播放切换
+  const handleAutoPlayToggle = () => {
+    const newAutoPlay = !autoPlayEnabled;
+    setAutoPlayEnabled(newAutoPlay);
+    onAutoPlayChange?.(newAutoPlay);
   };
 
   const isMediaFailed = (mediaId: string) => failedMedia.has(mediaId);
@@ -229,13 +243,13 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
         </div>
       </div>
 
-      {/* Auto-play Toggle */}
+      {/* Auto-play Toggle - 修复功能 */}
       <div className="absolute top-4 left-4">
         <button
-          onClick={() => setAutoPlayEnabled(!autoPlayEnabled)}
+          onClick={handleAutoPlayToggle}
           className={`px-3 py-1 rounded-full text-sm font-medium transition-all duration-200 ${
             autoPlayEnabled 
-              ? 'bg-green-500 text-white' 
+              ? 'bg-green-500 text-white shadow-lg' 
               : 'bg-white bg-opacity-20 text-white hover:bg-opacity-30'
           }`}
         >
