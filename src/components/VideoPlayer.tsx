@@ -534,15 +534,16 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         </div>
       )}
 
-      {/* 全屏按钮（视频上方居中） */}
-      {!isFullscreen && (
+      {/* 全屏按钮 - 移动到+按钮正上方 */}
+      <div className="absolute bottom-32 right-4 z-50">
         <button
           onClick={toggleFullscreen}
-          className="absolute top-4 left-1/2 transform -translate-x-1/2 w-10 h-10 bg-black bg-opacity-50 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-opacity-70 transition-all duration-200"
+          className="w-8 h-8 bg-white bg-opacity-20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-opacity-30 transition-all duration-200 shadow-lg hover:shadow-xl"
+          title={isFullscreen ? "退出全屏" : "进入全屏"}
         >
-          <Maximize className="h-5 w-5" />
+          {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
         </button>
-      )}
+      </div>
 
       {/* 全屏模式返回按钮 */}
       {isFullscreen && (
