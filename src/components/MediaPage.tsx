@@ -99,20 +99,8 @@ const MediaPage: React.FC = () => {
       {/* Header */}
       <div className="absolute top-0 left-0 right-0 z-40 bg-gradient-to-b from-black/50 to-transparent">
         <div className="flex items-start justify-between p-4">
-          {/* 左侧按钮组 - 修复重叠问题 */}
+          {/* 左侧按钮组 - 移除自动播放按钮 */}
           <div className="flex flex-col space-y-4">
-            {/* 自动播放切换按钮 */}
-            <button
-              onClick={() => setAutoPlay(!autoPlay)}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                autoPlay 
-                  ? 'bg-green-500 text-white' 
-                  : 'bg-white bg-opacity-20 text-white hover:bg-opacity-30'
-              }`}
-            >
-              {autoPlay ? '自动播放' : '手动切换'}
-            </button>
-            
             {/* 数据统计显示 */}
             <div className="flex flex-col space-y-2">
               <div className="px-3 py-1 bg-blue-500 bg-opacity-80 text-white text-xs rounded-full text-center min-w-max">
