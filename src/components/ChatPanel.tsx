@@ -95,10 +95,10 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             placeholder="说点什么吧..."
-            className="w-full px-4 py-3 bg-white bg-opacity-20 backdrop-blur-sm border border-white border-opacity-30 rounded-xl text-white placeholder-white placeholder-opacity-60 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-1.5 bg-white bg-opacity-20 backdrop-blur-sm border border-white border-opacity-30 rounded-xl text-white placeholder-white placeholder-opacity-60 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center"
             maxLength={200}
           />
-          <div className="absolute right-3 top-3 text-xs text-white text-opacity-60">
+          <div className="absolute right-3 top-1.5 text-xs text-white text-opacity-60">
             {byteLength}/120
           </div>
         </div>
@@ -106,7 +106,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
         <button
           type="submit"
           disabled={!isValid}
-          className={`px-6 py-3 rounded-xl font-medium transition-all duration-200 flex items-center space-x-2 ${
+          className={`px-6 py-1.5 rounded-xl font-medium transition-all duration-200 flex items-center space-x-2 ${
             isValid
               ? 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white shadow-lg hover:shadow-xl'
               : 'bg-gray-600 text-gray-400 cursor-not-allowed'
