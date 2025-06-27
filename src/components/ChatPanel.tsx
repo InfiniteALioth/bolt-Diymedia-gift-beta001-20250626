@@ -68,9 +68,9 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-4">
-      {/* Chat Messages - 整个对话框靠左贴边 */}
-      <div className="mb-4 relative" style={{ marginLeft: '0', marginRight: 'auto', width: '66.67%' }}>
-        {/* 左侧滚动控制按钮 - 宽度缩小一半 */}
+      {/* Chat Messages - 移动到进度条上方2px的位置 */}
+      <div className="mb-4 relative" style={{ marginLeft: '0', marginRight: 'auto', width: '66.67%', marginBottom: '82px' }}>
+        {/* 左侧滚动控制按钮 */}
         <div className="absolute left-0 top-1/2 transform -translate-y-1/2 flex flex-col space-y-2 z-10">
           <button
             onClick={scrollUp}
@@ -97,7 +97,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
           </button>
         </div>
 
-        {/* Messages List - 滑动按钮和文字信息之间的间距缩小一半 */}
+        {/* Messages List */}
         <div 
           ref={messagesContainerRef}
           className="space-y-1 max-h-32 overflow-y-auto scrollbar-hide pl-6"
@@ -127,7 +127,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
         </div>
       </div>
 
-      {/* Input Form - 移除了媒体控制按钮 */}
+      {/* Input Form - 保持在底部 */}
       <form onSubmit={handleSubmit} className="flex space-x-3">
         <div className="flex-1 relative">
           <input
