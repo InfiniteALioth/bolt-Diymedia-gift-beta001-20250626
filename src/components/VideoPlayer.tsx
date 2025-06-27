@@ -535,7 +535,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       )}
 
       {/* 全屏按钮 - 移动到+按钮正上方 */}
-      <div className="absolute bottom-32 right-4 z-50">
+      <div className="absolute bottom-28 right-4 z-50">
         <button
           onClick={toggleFullscreen}
           className="w-8 h-8 bg-white bg-opacity-20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-opacity-30 transition-all duration-200 shadow-lg hover:shadow-xl"
