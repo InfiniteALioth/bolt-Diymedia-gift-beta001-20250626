@@ -43,7 +43,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
   const canShowMore = messages.length > visibleCount;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-4">
+    <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-black from-opacity-90 to-transparent p-4">
       {/* Chat Messages */}
       <div className="mb-4">
         {/* History Navigation */}
@@ -51,7 +51,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
           <div className="flex justify-center mb-2">
             <button
               onClick={() => setShowHistory(!showHistory)}
-              className="px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-white text-sm hover:bg-white/30 transition-all duration-200 flex items-center space-x-1"
+              className="px-3 py-1 bg-white bg-opacity-20 backdrop-blur-sm rounded-full text-white text-sm hover:bg-opacity-30 transition-all duration-200 flex items-center space-x-1"
             >
               {showHistory ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
               <span>{showHistory ? '收起历史' : '查看历史'}</span>
@@ -63,7 +63,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
           <div className="flex justify-center mb-2">
             <button
               onClick={() => setVisibleCount(prev => Math.min(prev + 10, messages.length))}
-              className="px-3 py-1 bg-white/10 backdrop-blur-sm rounded-full text-white/70 text-sm hover:bg-white/20 transition-all duration-200"
+              className="px-3 py-1 bg-white bg-opacity-10 backdrop-blur-sm rounded-full text-white text-opacity-70 text-sm hover:bg-opacity-20 transition-all duration-200"
             >
               加载更多消息
             </button>
@@ -75,10 +75,10 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
           {displayedMessages.map((message) => (
             <div
               key={message.id}
-              className="bg-black/30 backdrop-blur-sm rounded-lg px-3 py-2 text-white"
+              className="bg-black bg-opacity-30 backdrop-blur-sm rounded-lg px-3 py-2 text-white"
             >
               <span className="font-medium text-blue-400">{message.username}</span>
-              <span className="text-white/70">: </span>
+              <span className="text-white text-opacity-70">: </span>
               <span>{message.content}</span>
             </div>
           ))}
@@ -95,10 +95,10 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             placeholder="说点什么吧..."
-            className="w-full px-4 py-3 bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-3 bg-white bg-opacity-20 backdrop-blur-sm border border-white border-opacity-30 rounded-xl text-white placeholder-white placeholder-opacity-60 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             maxLength={200}
           />
-          <div className="absolute right-3 top-3 text-xs text-white/60">
+          <div className="absolute right-3 top-3 text-xs text-white text-opacity-60">
             {byteLength}/120
           </div>
         </div>

@@ -1,10 +1,39 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Full-Stack Media Management Application</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>互动媒体展示平台</title>
+    <style>
+      /* 防止移动端缩放和滚动 */
+      html, body {
+        height: 100%;
+        overflow: hidden;
+        touch-action: manipulation;
+        -webkit-user-select: none;
+        -webkit-touch-callout: none;
+        -webkit-tap-highlight-color: transparent;
+      }
+      
+      /* 确保在所有浏览器中正确显示 */
+      * {
+        box-sizing: border-box;
+      }
+      
+      /* 修复移动端视口问题 */
+      #root {
+        width: 100vw;
+        height: 100vh;
+        position: fixed;
+        top: 0;
+        left: 0;
+        overflow: hidden;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>

@@ -37,9 +37,9 @@ const MediaPage: React.FC = () => {
   // 等待数据加载完成
   if (!isLoaded) {
     return (
-      <div className="relative w-full h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center">
+      <div className="w-full h-screen bg-gray-900 flex items-center justify-center">
         <div className="text-center text-white">
-          <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+          <div className="w-16 h-16 bg-white bg-opacity-10 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
             <Upload className="h-8 w-8" />
           </div>
           <h3 className="text-xl font-semibold mb-2">加载中...</h3>
@@ -118,9 +118,9 @@ const MediaPage: React.FC = () => {
   console.log('聊天消息数量:', chatMessages.length);
 
   return (
-    <div className="relative w-full h-screen bg-black overflow-hidden">
+    <div className="w-full h-screen bg-black overflow-hidden relative">
       {/* Header */}
-      <div className="absolute top-0 left-0 right-0 z-40 bg-gradient-to-b from-black/50 to-transparent">
+      <div className="absolute top-0 left-0 right-0 z-40 bg-gradient-to-b from-black from-opacity-50 to-transparent">
         <div className="flex items-center justify-between p-4">
           <div className="flex items-center space-x-3">
             <button
@@ -128,7 +128,7 @@ const MediaPage: React.FC = () => {
               className={`px-3 py-1 rounded-full text-sm font-medium transition-all duration-200 ${
                 autoPlay 
                   ? 'bg-green-500 text-white' 
-                  : 'bg-white/20 text-white hover:bg-white/30'
+                  : 'bg-white bg-opacity-20 text-white hover:bg-opacity-30'
               }`}
             >
               {autoPlay ? '自动播放' : '手动切换'}
@@ -136,10 +136,10 @@ const MediaPage: React.FC = () => {
             
             {/* 数据统计显示 */}
             <div className="flex items-center space-x-2">
-              <div className="px-3 py-1 bg-blue-500/80 text-white text-xs rounded-full">
+              <div className="px-3 py-1 bg-blue-500 bg-opacity-80 text-white text-xs rounded-full">
                 媒体: {mediaItems.length}
               </div>
-              <div className="px-3 py-1 bg-purple-500/80 text-white text-xs rounded-full">
+              <div className="px-3 py-1 bg-purple-500 bg-opacity-80 text-white text-xs rounded-full">
                 消息: {chatMessages.length}
               </div>
             </div>
@@ -148,7 +148,7 @@ const MediaPage: React.FC = () => {
             {(mediaItems.length > 0 || chatMessages.length > 0) && (
               <button
                 onClick={handleClearAllData}
-                className="px-3 py-1 bg-red-500/80 text-white text-xs rounded-full hover:bg-red-600/80 transition-all duration-200 flex items-center space-x-1"
+                className="px-3 py-1 bg-red-500 bg-opacity-80 text-white text-xs rounded-full hover:bg-opacity-100 transition-all duration-200 flex items-center space-x-1"
               >
                 <Trash2 className="h-3 w-3" />
                 <span>清空</span>
@@ -158,7 +158,7 @@ const MediaPage: React.FC = () => {
           
           <button
             onClick={() => setShowUserEdit(true)}
-            className="flex items-center space-x-2 px-3 py-2 bg-white/20 backdrop-blur-sm rounded-full text-white hover:bg-white/30 transition-all duration-200"
+            className="flex items-center space-x-2 px-3 py-2 bg-white bg-opacity-20 backdrop-blur-sm rounded-full text-white hover:bg-opacity-30 transition-all duration-200"
           >
             <User className="h-4 w-4" />
             <span className="text-sm font-medium">{user.username}</span>
