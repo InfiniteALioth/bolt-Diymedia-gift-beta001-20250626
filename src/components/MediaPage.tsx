@@ -98,12 +98,13 @@ const MediaPage: React.FC = () => {
     <div className="w-full h-screen bg-black overflow-hidden relative">
       {/* Header */}
       <div className="absolute top-0 left-0 right-0 z-40 bg-gradient-to-b from-black/50 to-transparent">
-        <div className="flex items-center justify-between p-4">
-          {/* 左侧按钮组 - 改为竖向排列 */}
-          <div className="flex flex-col space-y-3">
+        <div className="flex items-start justify-between p-4">
+          {/* 左侧按钮组 - 修复重叠问题 */}
+          <div className="flex flex-col space-y-4">
+            {/* 自动播放切换按钮 */}
             <button
               onClick={() => setAutoPlay(!autoPlay)}
-              className={`px-3 py-1 rounded-full text-sm font-medium transition-all duration-200 ${
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
                 autoPlay 
                   ? 'bg-green-500 text-white' 
                   : 'bg-white bg-opacity-20 text-white hover:bg-opacity-30'
@@ -114,10 +115,10 @@ const MediaPage: React.FC = () => {
             
             {/* 数据统计显示 */}
             <div className="flex flex-col space-y-2">
-              <div className="px-3 py-1 bg-blue-500 bg-opacity-80 text-white text-xs rounded-full text-center">
+              <div className="px-3 py-1 bg-blue-500 bg-opacity-80 text-white text-xs rounded-full text-center min-w-max">
                 媒体: {mediaItems.length}
               </div>
-              <div className="px-3 py-1 bg-purple-500 bg-opacity-80 text-white text-xs rounded-full text-center">
+              <div className="px-3 py-1 bg-purple-500 bg-opacity-80 text-white text-xs rounded-full text-center min-w-max">
                 消息: {chatMessages.length}
               </div>
             </div>
@@ -126,7 +127,7 @@ const MediaPage: React.FC = () => {
             {(mediaItems.length > 0 || chatMessages.length > 0) && (
               <button
                 onClick={handleClearAllData}
-                className="px-3 py-1 bg-red-500 bg-opacity-80 text-white text-xs rounded-full hover:bg-opacity-100 transition-all duration-200 flex items-center justify-center space-x-1"
+                className="px-3 py-1 bg-red-500 bg-opacity-80 text-white text-xs rounded-full hover:bg-opacity-100 transition-all duration-200 flex items-center justify-center space-x-1 min-w-max"
               >
                 <Trash2 className="h-3 w-3" />
                 <span>清空</span>
@@ -134,6 +135,7 @@ const MediaPage: React.FC = () => {
             )}
           </div>
           
+          {/* 右侧用户按钮 */}
           <button
             onClick={() => setShowUserEdit(true)}
             className="flex items-center space-x-2 px-3 py-2 bg-white bg-opacity-20 backdrop-blur-sm rounded-full text-white hover:bg-opacity-30 transition-all duration-200"
