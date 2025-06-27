@@ -6,7 +6,7 @@ import MediaDisplay from './MediaDisplay';
 import ChatPanel from './ChatPanel';
 import MediaUpload from './MediaUpload';
 import UserSetup from './UserSetup';
-import { Upload, User, Trash2 } from 'lucide-react';
+import { Upload, User } from 'lucide-react';
 
 const MediaPage: React.FC = () => {
   const { user, createUser, updateUsername } = useAuth();
@@ -98,63 +98,16 @@ const MediaPage: React.FC = () => {
     setAutoPlay(false);
   };
 
-  const handleClearAllData = () => {
-    if (confirm('确定要清空所有媒体和聊天记录吗？此操作不可恢复。')) {
-      clearAllData();
-      setCurrentMediaIndex(0);
-    }
-  };
-
-  const handleToggleAutoPlay = () => {
-    setAutoPlay(!autoPlay);
-  };
-
   // 调试信息
   console.log('当前媒体项数量:', mediaItems.length);
   console.log('当前媒体索引:', currentMediaIndex);
   console.log('聊天消息数量:', chatMessages.length);
-  console.log('自动播放状态:', autoPlay);
 
   return (
     <div className="w-full h-screen bg-black overflow-hidden relative">
       {/* Header */}
       <div className="absolute top-0 left-0 right-0 z-40 bg-gradient-to-b from-black/50 to-transparent">
-        <div className="flex items-center justify-between p-4">
-          <div className="flex items-center space-x-3">
-            {/* 自动播放切换按钮 */}
-            <button
-              onClick={handleToggleAutoPlay}
-              className={`px-3 py-1 rounded-full text-sm font-medium transition-all duration-200 ${
-                autoPlay 
-                  ? 'bg-green-500 text-white shadow-lg' 
-                  : 'bg-white bg-opacity-20 text-white hover:bg-opacity-30'
-              }`}
-            >
-              {autoPlay ? '自动播放' : '手动切换'}
-            </button>
-            
-            {/* 数据统计显示 */}
-            <div className="flex items-center space-x-2">
-              <div className="px-3 py-1 bg-blue-500 bg-opacity-80 text-white text-xs rounded-full">
-                媒体: {mediaItems.length}
-              </div>
-              <div className="px-3 py-1 bg-purple-500 bg-opacity-80 text-white text-xs rounded-full">
-                消息: {chatMessages.length}
-              </div>
-            </div>
-
-            {/* 清空数据按钮 */}
-            {(mediaItems.length > 0 || chatMessages.length > 0) && (
-              <button
-                onClick={handleClearAllData}
-                className="px-3 py-1 bg-red-500 bg-opacity-80 text-white text-xs rounded-full hover:bg-opacity-100 transition-all duration-200 flex items-center space-x-1"
-              >
-                <Trash2 className="h-3 w-3" />
-                <span>清空</span>
-              </button>
-            )}
-          </div>
-          
+        <div className="flex items-center justify-end p-4">
           {/* 右侧用户按钮 */}
           <button
             onClick={() => setShowUserEdit(true)}
