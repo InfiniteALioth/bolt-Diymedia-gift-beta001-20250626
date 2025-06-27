@@ -60,14 +60,14 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-4">
-      {/* Chat Messages - 高度缩小一半，宽度向左缩小三分之一 */}
-      <div className="mb-4 mr-[33%] relative">
-        {/* 左侧滚动控制按钮 */}
+      {/* Chat Messages - 整个对话框靠左贴边 */}
+      <div className="mb-4 relative" style={{ marginLeft: '0', marginRight: 'auto', width: '66.67%' }}>
+        {/* 左侧滚动控制按钮 - 宽度缩小一半 */}
         <div className="absolute left-0 top-1/2 transform -translate-y-1/2 flex flex-col space-y-2 z-10">
           <button
             onClick={scrollUp}
             disabled={!canScrollUp}
-            className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 ${
+            className={`w-4 h-8 rounded-full flex items-center justify-center transition-all duration-200 ${
               canScrollUp 
                 ? 'bg-white/20 hover:bg-white/30 text-white' 
                 : 'bg-white/10 text-white/30 cursor-not-allowed'
@@ -79,7 +79,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
           <button
             onClick={scrollDown}
             disabled={!canScrollDown}
-            className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 ${
+            className={`w-4 h-8 rounded-full flex items-center justify-center transition-all duration-200 ${
               canScrollDown 
                 ? 'bg-white/20 hover:bg-white/30 text-white' 
                 : 'bg-white/10 text-white/30 cursor-not-allowed'
@@ -89,10 +89,10 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
           </button>
         </div>
 
-        {/* Messages List - 调整为显示6条信息，每条独占一行 */}
+        {/* Messages List - 滑动按钮和文字信息之间的间距缩小一半 */}
         <div 
           ref={messagesContainerRef}
-          className="space-y-1 max-h-32 overflow-y-auto scrollbar-hide pl-12"
+          className="space-y-1 max-h-32 overflow-y-auto scrollbar-hide pl-6"
           style={{
             scrollbarWidth: 'none',
             msOverflowStyle: 'none',
