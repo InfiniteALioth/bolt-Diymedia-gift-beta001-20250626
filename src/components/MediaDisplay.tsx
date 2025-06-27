@@ -20,8 +20,14 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
 
   const currentMedia = mediaItems[currentIndex];
 
+  console.log('MediaDisplay 渲染:', {
+    mediaItemsCount: mediaItems.length,
+    currentIndex,
+    currentMedia: currentMedia ? currentMedia.type : 'none'
+  });
+
   useEffect(() => {
-    if (!autoPlay) return;
+    if (!autoPlay || mediaItems.length <= 1) return;
 
     const interval = setInterval(() => {
       onIndexChange((currentIndex + 1) % mediaItems.length);
@@ -31,16 +37,18 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
   }, [currentIndex, mediaItems.length, autoPlay, onIndexChange]);
 
   const handlePrevious = () => {
+    if (mediaItems.length === 0) return;
     const newIndex = currentIndex === 0 ? mediaItems.length - 1 : currentIndex - 1;
     onIndexChange(newIndex);
   };
 
   const handleNext = () => {
+    if (mediaItems.length === 0) return;
     const newIndex = (currentIndex + 1) % mediaItems.length;
     onIndexChange(newIndex);
   };
 
-  if (!currentMedia) {
+  if (mediaItems.length === 0) {
     return (
       <div className="relative w-full h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center">
         <div className="text-center text-white">
@@ -48,7 +56,19 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
             <Play className="h-8 w-8" />
           </div>
           <h3 className="text-xl font-semibold mb-2">暂无媒体内容</h3>
-          <p className="text-gray-300">点击上传按钮开始分享</p>
+          <p className="text-gray-300">点击右上角的上传按钮开始分享</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!currentMedia) {
+    console.warn('当前媒体项为空，但媒体列表不为空');
+    return (
+      <div className="relative w-full h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center">
+        <div className="text-center text-white">
+          <h3 className="text-xl font-semibold mb-2">媒体加载中...</h3>
+          <p className="text-gray-300">请稍候</p>
         </div>
       </div>
     );
@@ -63,6 +83,8 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
             src={currentMedia.url}
             alt={currentMedia.caption}
             className="max-w-full max-h-full object-contain"
+            onLoad={() => console.log('图片加载完成:', currentMedia.url)}
+            onError={(e) => console.error('图片加载失败:', currentMedia.url, e)}
           />
         )}
         
@@ -74,6 +96,9 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
             muted={isMuted}
             loop
             playsInline
+            controls
+            onLoadedData={() => console.log('视频加载完成:', currentMedia.url)}
+            onError={(e) => console.error('视频加载失败:', currentMedia.url, e)}
           />
         )}
         
@@ -92,13 +117,15 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
               controls
               autoPlay={autoPlay}
               muted={isMuted}
+              onLoadedData={() => console.log('音频加载完成:', currentMedia.url)}
+              onError={(e) => console.error('音频加载失败:', currentMedia.url, e)}
             />
           </div>
         )}
       </div>
 
       {/* Media Info Overlay */}
-      <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/60 to-transparent p-6">
+      <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/60 to-transparent p-6 pt-20">
         <div className="text-center text-white">
           <p className="text-lg font-medium">
             {currentMedia.caption && `"${currentMedia.caption}" - `}
@@ -108,21 +135,23 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
       </div>
 
       {/* Navigation Controls */}
-      <div className="absolute right-4 top-1/2 transform -translate-y-1/2 flex flex-col space-y-4">
-        <button
-          onClick={handlePrevious}
-          className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-200"
-        >
-          <ChevronUp className="h-6 w-6" />
-        </button>
-        
-        <button
-          onClick={handleNext}
-          className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-200"
-        >
-          <ChevronDown className="h-6 w-6" />
-        </button>
-      </div>
+      {mediaItems.length > 1 && (
+        <div className="absolute right-4 top-1/2 transform -translate-y-1/2 flex flex-col space-y-4">
+          <button
+            onClick={handlePrevious}
+            className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-200"
+          >
+            <ChevronUp className="h-6 w-6" />
+          </button>
+          
+          <button
+            onClick={handleNext}
+            className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-200"
+          >
+            <ChevronDown className="h-6 w-6" />
+          </button>
+        </div>
+      )}
 
       {/* Media Controls */}
       {(currentMedia.type === 'video' || currentMedia.type === 'audio') && (
@@ -144,16 +173,19 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
       )}
 
       {/* Progress Indicator */}
-      <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex space-x-1">
-        {mediaItems.map((_, index) => (
-          <div
-            key={index}
-            className={`w-2 h-2 rounded-full transition-all duration-200 ${
-              index === currentIndex ? 'bg-white' : 'bg-white/30'
-            }`}
-          />
-        ))}
-      </div>
+      {mediaItems.length > 1 && (
+        <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex space-x-1">
+          {mediaItems.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => onIndexChange(index)}
+              className={`w-2 h-2 rounded-full transition-all duration-200 ${
+                index === currentIndex ? 'bg-white' : 'bg-white/30'
+              }`}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 };

@@ -25,14 +25,20 @@ const MediaPage: React.FC = () => {
   }
 
   const handleMediaUpload = (files: File[], caption: string) => {
-    files.forEach((file) => {
+    console.log('开始处理媒体上传:', files.length, '个文件');
+    
+    const newMediaItems: MediaItem[] = [];
+    
+    files.forEach((file, index) => {
       const url = URL.createObjectURL(file);
+      const mediaType = file.type.startsWith('image/') ? 'image' : 
+                       file.type.startsWith('video/') ? 'video' : 'audio';
+      
       const mediaItem: MediaItem = {
-        id: 'media_' + Math.random().toString(36).substr(2, 9),
-        type: file.type.startsWith('image/') ? 'image' : 
-              file.type.startsWith('video/') ? 'video' : 'audio',
+        id: 'media_' + Math.random().toString(36).substr(2, 9) + '_' + index,
+        type: mediaType,
         url,
-        thumbnail: file.type.startsWith('image/') ? url : undefined,
+        thumbnail: mediaType === 'image' ? url : undefined,
         uploaderId: user.id,
         uploaderName: user.username,
         caption,
@@ -40,8 +46,22 @@ const MediaPage: React.FC = () => {
         pageId,
       };
       
-      setMediaItems(prev => [...prev, mediaItem]);
+      console.log('创建媒体项:', mediaItem);
+      newMediaItems.push(mediaItem);
     });
+    
+    setMediaItems(prev => {
+      const updated = [...prev, ...newMediaItems];
+      console.log('更新媒体列表:', updated);
+      return updated;
+    });
+    
+    // 如果这是第一次上传，设置当前索引为0
+    if (mediaItems.length === 0) {
+      setCurrentMediaIndex(0);
+    }
+    
+    setShowUpload(false);
   };
 
   const handleSendMessage = (content: string) => {
@@ -62,6 +82,11 @@ const MediaPage: React.FC = () => {
     setShowUserEdit(false);
   };
 
+  // 调试信息
+  console.log('当前媒体项数量:', mediaItems.length);
+  console.log('当前媒体索引:', currentMediaIndex);
+  console.log('媒体项列表:', mediaItems);
+
   return (
     <div className="relative w-full h-screen bg-black overflow-hidden">
       {/* Header */}
@@ -78,6 +103,11 @@ const MediaPage: React.FC = () => {
             >
               {autoPlay ? '自动播放' : '手动切换'}
             </button>
+            
+            {/* 调试信息显示 */}
+            <div className="px-3 py-1 bg-blue-500/80 text-white text-xs rounded-full">
+              媒体: {mediaItems.length}
+            </div>
           </div>
           
           <button

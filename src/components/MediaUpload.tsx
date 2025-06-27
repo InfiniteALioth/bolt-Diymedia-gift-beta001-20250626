@@ -34,9 +34,13 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
   };
 
   const validateFiles = (files: File[]): string | null => {
+    if (files.length === 0) return '请选择至少一个文件';
+    
     const imageFiles = files.filter(f => f.type.startsWith('image/'));
     const videoFiles = files.filter(f => f.type.startsWith('video/'));
     const audioFiles = files.filter(f => f.type.startsWith('audio/'));
+
+    console.log('文件验证:', { imageFiles: imageFiles.length, videoFiles: videoFiles.length, audioFiles: audioFiles.length });
 
     if (imageFiles.length > 3) return '图片最多选择3张';
     if (videoFiles.length > 1) return '视频最多选择1个';
@@ -50,11 +54,10 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
 
     if (typeCount > 1) return '每次只能上传同一类型的媒体';
 
-    // Check video/audio duration (simulated - in real app would check actual duration)
-    for (const file of [...videoFiles, ...audioFiles]) {
-      // This is a placeholder - real implementation would check actual duration
-      if (file.size > 50 * 1024 * 1024) { // 50MB as rough estimate for 60 seconds
-        return `${file.type.startsWith('video/') ? '视频' : '音频'}时长不能超过60秒`;
+    // Check file sizes (50MB limit as rough estimate)
+    for (const file of files) {
+      if (file.size > 50 * 1024 * 1024) {
+        return `文件 "${file.name}" 过大，请选择小于50MB的文件`;
       }
     }
 
@@ -65,6 +68,8 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
     if (!files) return;
 
     const fileArray = Array.from(files);
+    console.log('选择的文件:', fileArray.map(f => ({ name: f.name, type: f.type, size: f.size })));
+    
     const error = validateFiles(fileArray);
 
     if (error) {
@@ -104,8 +109,8 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
 
   const handleSubmit = () => {
     if (selectedFiles.length > 0 && isCaptionValid) {
+      console.log('提交上传:', selectedFiles.length, '个文件，说明:', caption);
       onUpload(selectedFiles, caption);
-      onClose();
     }
   };
 
