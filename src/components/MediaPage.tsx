@@ -6,7 +6,7 @@ import MediaDisplay from './MediaDisplay';
 import ChatPanel from './ChatPanel';
 import MediaUpload from './MediaUpload';
 import UserSetup from './UserSetup';
-import { Upload, User, Trash2, Play, Pause } from 'lucide-react';
+import { Upload, User, Trash2 } from 'lucide-react';
 
 const MediaPage: React.FC = () => {
   const { user, createUser, updateUsername } = useAuth();
@@ -96,60 +96,50 @@ const MediaPage: React.FC = () => {
 
   return (
     <div className="w-full h-screen bg-black overflow-hidden relative">
-      {/* Left Sidebar Button Group */}
-      <div className="absolute left-4 top-1/2 transform -translate-y-1/2 z-40 flex flex-col space-y-2">
-        {/* Auto Play Toggle */}
-        <button
-          onClick={() => setAutoPlay(!autoPlay)}
-          className={`w-14 h-10 rounded-lg text-xs font-medium transition-all duration-200 flex items-center justify-center ${
-            autoPlay 
-              ? 'bg-green-500 text-white shadow-lg' 
-              : 'bg-white bg-opacity-20 text-white hover:bg-opacity-30'
-          }`}
-          title={autoPlay ? '自动播放' : '手动切换'}
-        >
-          {autoPlay ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
-        </button>
+      {/* Header */}
+      <div className="absolute top-0 left-0 right-0 z-40 bg-gradient-to-b from-black/50 to-transparent">
+        <div className="flex items-center justify-between p-4">
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={() => setAutoPlay(!autoPlay)}
+              className={`px-3 py-1 rounded-full text-sm font-medium transition-all duration-200 ${
+                autoPlay 
+                  ? 'bg-green-500 text-white' 
+                  : 'bg-white bg-opacity-20 text-white hover:bg-opacity-30'
+              }`}
+            >
+              {autoPlay ? '自动播放' : '手动切换'}
+            </button>
+            
+            {/* 数据统计显示 */}
+            <div className="flex items-center space-x-2">
+              <div className="px-3 py-1 bg-blue-500 bg-opacity-80 text-white text-xs rounded-full">
+                媒体: {mediaItems.length}
+              </div>
+              <div className="px-3 py-1 bg-purple-500 bg-opacity-80 text-white text-xs rounded-full">
+                消息: {chatMessages.length}
+              </div>
+            </div>
 
-        {/* Upload Button */}
-        <button
-          onClick={() => setShowUpload(true)}
-          className="w-14 h-10 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 rounded-lg flex items-center justify-center text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
-          title="上传媒体"
-        >
-          <Upload className="h-4 w-4" />
-        </button>
-
-        {/* User Profile Button */}
-        <button
-          onClick={() => setShowUserEdit(true)}
-          className="w-14 h-10 bg-white bg-opacity-20 backdrop-blur-sm rounded-lg text-white hover:bg-opacity-30 transition-all duration-200 flex items-center justify-center"
-          title={user.username}
-        >
-          <User className="h-4 w-4" />
-        </button>
-
-        {/* Clear Data Button */}
-        {(mediaItems.length > 0 || chatMessages.length > 0) && (
+            {/* 清空数据按钮 */}
+            {(mediaItems.length > 0 || chatMessages.length > 0) && (
+              <button
+                onClick={handleClearAllData}
+                className="px-3 py-1 bg-red-500 bg-opacity-80 text-white text-xs rounded-full hover:bg-opacity-100 transition-all duration-200 flex items-center space-x-1"
+              >
+                <Trash2 className="h-3 w-3" />
+                <span>清空</span>
+              </button>
+            )}
+          </div>
+          
           <button
-            onClick={handleClearAllData}
-            className="w-14 h-10 bg-red-500 bg-opacity-80 text-white rounded-lg hover:bg-opacity-100 transition-all duration-200 flex items-center justify-center"
-            title="清空数据"
+            onClick={() => setShowUserEdit(true)}
+            className="flex items-center space-x-2 px-3 py-2 bg-white bg-opacity-20 backdrop-blur-sm rounded-full text-white hover:bg-opacity-30 transition-all duration-200"
           >
-            <Trash2 className="h-4 w-4" />
+            <User className="h-4 w-4" />
+            <span className="text-sm font-medium">{user.username}</span>
           </button>
-        )}
-      </div>
-
-      {/* Stats Display - Top Right */}
-      <div className="absolute top-4 right-4 z-40 flex flex-col space-y-2">
-        <div className="flex items-center space-x-2">
-          <div className="px-3 py-1 bg-blue-500 bg-opacity-80 text-white text-xs rounded-full">
-            媒体: {mediaItems.length}
-          </div>
-          <div className="px-3 py-1 bg-purple-500 bg-opacity-80 text-white text-xs rounded-full">
-            消息: {chatMessages.length}
-          </div>
         </div>
       </div>
 
@@ -160,6 +150,14 @@ const MediaPage: React.FC = () => {
         onIndexChange={setCurrentMediaIndex}
         autoPlay={autoPlay}
       />
+
+      {/* Upload Button */}
+      <button
+        onClick={() => setShowUpload(true)}
+        className="absolute top-20 right-4 z-40 w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 rounded-full flex items-center justify-center text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
+      >
+        <Upload className="h-6 w-6" />
+      </button>
 
       {/* Chat Panel */}
       <ChatPanel
