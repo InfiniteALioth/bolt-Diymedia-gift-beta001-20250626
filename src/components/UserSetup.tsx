@@ -52,13 +52,6 @@ const UserSetup: React.FC<UserSetupProps> = ({
 
   return (
     <div className={`min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4 ${isMobile ? 'mobile-full-height' : ''}`}>
-      {/* 移动端调试信息 */}
-      {isMobile && (
-        <div className="absolute top-4 left-4 right-4 bg-green-500 text-white text-xs p-2 rounded z-50">
-          移动端用户设置 | 屏幕: {window.innerWidth}x{window.innerHeight}
-        </div>
-      )}
-      
       <div className="max-w-md w-full">
         <div className="bg-white bg-opacity-80 backdrop-blur-sm rounded-2xl shadow-xl p-8 border border-white border-opacity-20">
           <div className="text-center mb-8">
