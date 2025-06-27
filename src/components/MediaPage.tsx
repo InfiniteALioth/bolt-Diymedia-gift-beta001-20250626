@@ -1,16 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { useMediaStorage } from '../hooks/useMediaStorage';
 import { MediaItem, ChatMessage } from '../types';
 import MediaDisplay from './MediaDisplay';
 import ChatPanel from './ChatPanel';
 import MediaUpload from './MediaUpload';
 import UserSetup from './UserSetup';
-import { Upload, User, Settings } from 'lucide-react';
+import { Upload, User, Trash2 } from 'lucide-react';
 
 const MediaPage: React.FC = () => {
   const { user, createUser, updateUsername } = useAuth();
-  const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
   const [showUpload, setShowUpload] = useState(false);
   const [showUserEdit, setShowUserEdit] = useState(false);
@@ -18,10 +17,36 @@ const MediaPage: React.FC = () => {
 
   // Mock page ID - in real app this would come from URL params
   const pageId = 'page_demo';
+  
+  // 使用持久化存储钩子
+  const {
+    mediaItems,
+    chatMessages,
+    isLoaded,
+    addMediaItems,
+    removeMediaItem,
+    addChatMessage,
+    clearAllData
+  } = useMediaStorage(pageId);
 
   // Handle first-time user setup
   if (!user) {
     return <UserSetup onComplete={createUser} />;
+  }
+
+  // 等待数据加载完成
+  if (!isLoaded) {
+    return (
+      <div className="relative w-full h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center">
+        <div className="text-center text-white">
+          <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+            <Upload className="h-8 w-8" />
+          </div>
+          <h3 className="text-xl font-semibold mb-2">加载中...</h3>
+          <p className="text-gray-300">正在加载媒体内容</p>
+        </div>
+      </div>
+    );
   }
 
   const handleMediaUpload = (files: File[], caption: string) => {
@@ -50,11 +75,8 @@ const MediaPage: React.FC = () => {
       newMediaItems.push(mediaItem);
     });
     
-    setMediaItems(prev => {
-      const updated = [...prev, ...newMediaItems];
-      console.log('更新媒体列表:', updated);
-      return updated;
-    });
+    // 使用持久化存储添加媒体项
+    addMediaItems(newMediaItems);
     
     // 如果这是第一次上传，设置当前索引为0
     if (mediaItems.length === 0) {
@@ -74,7 +96,8 @@ const MediaPage: React.FC = () => {
       pageId,
     };
     
-    setChatMessages(prev => [...prev, message]);
+    // 使用持久化存储添加消息
+    addChatMessage(message);
   };
 
   const handleUsernameUpdate = (newUsername: string) => {
@@ -82,10 +105,17 @@ const MediaPage: React.FC = () => {
     setShowUserEdit(false);
   };
 
+  const handleClearAllData = () => {
+    if (confirm('确定要清空所有媒体和聊天记录吗？此操作不可恢复。')) {
+      clearAllData();
+      setCurrentMediaIndex(0);
+    }
+  };
+
   // 调试信息
   console.log('当前媒体项数量:', mediaItems.length);
   console.log('当前媒体索引:', currentMediaIndex);
-  console.log('媒体项列表:', mediaItems);
+  console.log('聊天消息数量:', chatMessages.length);
 
   return (
     <div className="relative w-full h-screen bg-black overflow-hidden">
@@ -104,10 +134,26 @@ const MediaPage: React.FC = () => {
               {autoPlay ? '自动播放' : '手动切换'}
             </button>
             
-            {/* 调试信息显示 */}
-            <div className="px-3 py-1 bg-blue-500/80 text-white text-xs rounded-full">
-              媒体: {mediaItems.length}
+            {/* 数据统计显示 */}
+            <div className="flex items-center space-x-2">
+              <div className="px-3 py-1 bg-blue-500/80 text-white text-xs rounded-full">
+                媒体: {mediaItems.length}
+              </div>
+              <div className="px-3 py-1 bg-purple-500/80 text-white text-xs rounded-full">
+                消息: {chatMessages.length}
+              </div>
             </div>
+
+            {/* 清空数据按钮 */}
+            {(mediaItems.length > 0 || chatMessages.length > 0) && (
+              <button
+                onClick={handleClearAllData}
+                className="px-3 py-1 bg-red-500/80 text-white text-xs rounded-full hover:bg-red-600/80 transition-all duration-200 flex items-center space-x-1"
+              >
+                <Trash2 className="h-3 w-3" />
+                <span>清空</span>
+              </button>
+            )}
           </div>
           
           <button
