@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, Smile } from 'lucide-react';
 
 interface UserSetupProps {
@@ -14,6 +14,20 @@ const UserSetup: React.FC<UserSetupProps> = ({
 }) => {
   const [username, setUsername] = useState(currentUsername);
   const [isValid, setIsValid] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    // 检测移动端
+    const checkMobile = () => {
+      const mobile = window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      setIsMobile(mobile);
+      console.log('UserSetup - 移动端检测:', mobile);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const validateUsername = (value: string) => {
     const byteLength = new TextEncoder().encode(value).length;
@@ -29,6 +43,7 @@ const UserSetup: React.FC<UserSetupProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (isValid) {
+      console.log('UserSetup - 提交用户名:', username);
       onComplete(username);
     }
   };
@@ -36,7 +51,14 @@ const UserSetup: React.FC<UserSetupProps> = ({
   const byteLength = new TextEncoder().encode(username).length;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
+    <div className={`min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4 ${isMobile ? 'mobile-full-height' : ''}`}>
+      {/* 移动端调试信息 */}
+      {isMobile && (
+        <div className="absolute top-4 left-4 right-4 bg-green-500 text-white text-xs p-2 rounded z-50">
+          移动端用户设置 | 屏幕: {window.innerWidth}x{window.innerHeight}
+        </div>
+      )}
+      
       <div className="max-w-md w-full">
         <div className="bg-white bg-opacity-80 backdrop-blur-sm rounded-2xl shadow-xl p-8 border border-white border-opacity-20">
           <div className="text-center mb-8">
@@ -63,8 +85,14 @@ const UserSetup: React.FC<UserSetupProps> = ({
                   value={username}
                   onChange={handleUsernameChange}
                   placeholder="输入您的用户名称（支持表情符号）"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 pr-10"
+                  className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 pr-10 ${
+                    isMobile ? 'text-16px' : ''
+                  }`}
                   maxLength={50}
+                  autoComplete="off"
+                  autoCapitalize="off"
+                  autoCorrect="off"
+                  spellCheck="false"
                 />
                 <Smile className="absolute right-3 top-3.5 h-5 w-5 text-gray-400" />
               </div>
@@ -97,6 +125,7 @@ const UserSetup: React.FC<UserSetupProps> = ({
               <li>• 支持输入表情符号和特殊字符</li>
               <li>• 长度限制为30个字节</li>
               <li>• {isEditing ? '修改后将立即生效' : '设置后可随时修改'}</li>
+              {isMobile && <li>• 移动端优化版本</li>}
             </ul>
           </div>
         </div>
