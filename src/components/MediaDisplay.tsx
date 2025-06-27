@@ -32,12 +32,9 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
     onAutoPlayChange: !!onAutoPlayChange
   });
 
-  // 自动播放逻辑 - 直接使用传入的 autoPlay 状态
+  // 自动播放逻辑
   useEffect(() => {
-    console.log('自动播放效果触发:', { autoPlay, mediaItemsLength: mediaItems.length, currentIndex });
-    
     if (!autoPlay || mediaItems.length <= 1) {
-      console.log('自动播放条件不满足:', { autoPlay, mediaItemsLength: mediaItems.length });
       return;
     }
 
@@ -45,12 +42,10 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
     const interval = setInterval(() => {
       console.log('自动播放定时器触发，切换到下一个媒体');
       const nextIndex = (currentIndex + 1) % mediaItems.length;
-      console.log('切换索引:', currentIndex, '->', nextIndex);
       onIndexChange(nextIndex);
     }, 3000);
 
     return () => {
-      console.log('清除自动播放定时器');
       clearInterval(interval);
     };
   }, [currentIndex, mediaItems.length, autoPlay, onIndexChange]);
@@ -65,14 +60,12 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
   const handlePrevious = () => {
     if (mediaItems.length === 0) return;
     const newIndex = currentIndex === 0 ? mediaItems.length - 1 : currentIndex - 1;
-    console.log('手动切换到上一个:', currentIndex, '->', newIndex);
     onIndexChange(newIndex);
   };
 
   const handleNext = () => {
     if (mediaItems.length === 0) return;
     const newIndex = (currentIndex + 1) % mediaItems.length;
-    console.log('手动切换到下一个:', currentIndex, '->', newIndex);
     onIndexChange(newIndex);
   };
 
@@ -100,20 +93,18 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
     console.log('视频播放结束');
     if (autoPlay && mediaItems.length > 1) {
       console.log('视频结束，3秒后自动切换');
-      // 视频结束后等待3秒自动切换
       setTimeout(() => {
         handleNext();
       }, 3000);
     }
   };
 
-  // 处理自动播放切换 - 这是关键函数！
-  const handleAutoPlayToggle = () => {
+  // 自动播放切换函数 - 关键修复
+  const toggleAutoPlay = () => {
     const newAutoPlay = !autoPlay;
     console.log('🔄 自动播放按钮被点击!');
     console.log('当前状态:', autoPlay, '-> 新状态:', newAutoPlay);
     
-    // 立即调用父组件的回调函数
     if (onAutoPlayChange) {
       console.log('调用父组件回调函数');
       onAutoPlayChange(newAutoPlay);
@@ -134,7 +125,6 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
           <h3 className="text-xl font-semibold mb-2">暂无媒体内容</h3>
           <p className="text-gray-300 mb-4">点击右上角的上传按钮开始分享</p>
           
-          {/* 移动端提示 */}
           <div className="mt-4 p-3 bg-blue-500 bg-opacity-20 rounded-lg md:hidden">
             <p className="text-sm text-blue-200">
               移动端用户：请确保浏览器支持文件上传功能
@@ -264,21 +254,26 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
         </div>
       </div>
 
-      {/* Auto-play Toggle - 关键修复！ */}
-      <div className="absolute top-4 left-4">
+      {/* Auto-play Toggle Button - 重新设计 */}
+      <div className="absolute top-4 left-4 z-50">
         <button
-          onClick={handleAutoPlayToggle}
-          className={`px-3 py-1 rounded-full text-sm font-medium transition-all duration-200 transform hover:scale-105 active:scale-95 ${
-            autoPlay 
-              ? 'bg-green-500 text-white shadow-lg hover:bg-green-600 hover:shadow-xl' 
-              : 'bg-white bg-opacity-20 text-white hover:bg-opacity-30 backdrop-blur-sm border border-white border-opacity-30'
-          }`}
+          onClick={toggleAutoPlay}
+          className={`
+            flex items-center space-x-2 px-4 py-2 rounded-full text-sm font-medium 
+            transition-all duration-300 transform hover:scale-105 active:scale-95
+            shadow-lg hover:shadow-xl backdrop-blur-sm
+            ${autoPlay 
+              ? 'bg-green-500 hover:bg-green-600 text-white' 
+              : 'bg-gray-800 hover:bg-gray-700 text-white border border-gray-600'
+            }
+          `}
           style={{
-            minWidth: '80px',
+            minWidth: '120px',
             cursor: 'pointer'
           }}
         >
-          {autoPlay ? '🟢 自动播放' : '⚪ 手动切换'}
+          <div className={`w-3 h-3 rounded-full ${autoPlay ? 'bg-white' : 'bg-gray-400'}`}></div>
+          <span>{autoPlay ? '自动播放' : '手动切换'}</span>
         </button>
       </div>
 
@@ -315,11 +310,6 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
           ))}
         </div>
       )}
-
-      {/* 调试信息 - 临时添加，帮助调试 */}
-      <div className="absolute bottom-4 left-4 bg-black bg-opacity-50 text-white text-xs p-2 rounded">
-        自动播放状态: {autoPlay ? '开启' : '关闭'}
-      </div>
     </div>
   );
 };

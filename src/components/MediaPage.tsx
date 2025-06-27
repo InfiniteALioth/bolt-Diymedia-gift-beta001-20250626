@@ -99,7 +99,7 @@ const MediaPage: React.FC = () => {
     setAutoPlay(false);
   };
 
-  // 关键修复：自动播放状态变化处理函数
+  // 自动播放状态变化处理函数 - 关键修复
   const handleAutoPlayChange = (newAutoPlay: boolean) => {
     console.log('🔄 MediaPage 收到自动播放状态变化:', autoPlay, '->', newAutoPlay);
     setAutoPlay(newAutoPlay);
@@ -174,13 +174,6 @@ const MediaPage: React.FC = () => {
           onComplete={handleUsernameUpdate}
         />
       )}
-
-      {/* 调试信息面板 - 临时添加 */}
-      <div className="absolute top-4 right-20 bg-black bg-opacity-50 text-white text-xs p-2 rounded z-50">
-        <div>自动播放: {autoPlay ? '开启' : '关闭'}</div>
-        <div>媒体数量: {mediaItems.length}</div>
-        <div>当前索引: {currentMediaIndex}</div>
-      </div>
     </div>
   );
 };
