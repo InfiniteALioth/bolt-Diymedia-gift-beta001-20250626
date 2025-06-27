@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MediaItem } from '../types';
-import { Play, Pause, Volume2, VolumeX, ChevronUp, ChevronDown } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, ChevronUp, ChevronDown, AlertCircle, RefreshCw } from 'lucide-react';
 
 interface MediaDisplayProps {
   mediaItems: MediaItem[];
@@ -17,6 +17,7 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+  const [failedMedia, setFailedMedia] = useState<Set<string>>(new Set());
 
   const currentMedia = mediaItems[currentIndex];
 
@@ -48,6 +49,21 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
     onIndexChange(newIndex);
   };
 
+  const handleMediaError = (mediaId: string) => {
+    console.error('媒体加载失败:', mediaId);
+    setFailedMedia(prev => new Set([...prev, mediaId]));
+  };
+
+  const handleRetryMedia = (mediaId: string) => {
+    setFailedMedia(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(mediaId);
+      return newSet;
+    });
+  };
+
+  const isMediaFailed = (mediaId: string) => failedMedia.has(mediaId);
+
   if (mediaItems.length === 0) {
     return (
       <div className="w-full h-screen bg-gray-900 flex items-center justify-center">
@@ -74,55 +90,83 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
     );
   }
 
+  const MediaErrorFallback = ({ mediaId, onRetry }: { mediaId: string; onRetry: () => void }) => (
+    <div className="w-full max-w-md p-8 mx-4 bg-gradient-to-br from-red-500 to-red-600 rounded-2xl shadow-2xl text-center">
+      <div className="w-20 h-20 bg-white bg-opacity-20 rounded-full flex items-center justify-center mx-auto mb-4">
+        <AlertCircle className="h-10 w-10 text-white" />
+      </div>
+      <h3 className="text-xl font-semibold text-white mb-2">媒体加载失败</h3>
+      <p className="text-white text-opacity-80 mb-4">
+        文件可能已损坏或不再可用
+      </p>
+      <button
+        onClick={onRetry}
+        className="inline-flex items-center space-x-2 px-4 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg text-white transition-all duration-200"
+      >
+        <RefreshCw className="h-4 w-4" />
+        <span>重试加载</span>
+      </button>
+    </div>
+  );
+
   return (
     <div className="w-full h-screen bg-black overflow-hidden relative">
       {/* Media Content */}
       <div className="absolute inset-0 flex items-center justify-center">
-        {currentMedia.type === 'image' && (
-          <img
-            src={currentMedia.url}
-            alt={currentMedia.caption}
-            className="max-w-full max-h-full object-contain"
-            style={{ maxWidth: '100vw', maxHeight: '100vh' }}
-            onLoad={() => console.log('图片加载完成:', currentMedia.url)}
-            onError={(e) => console.error('图片加载失败:', currentMedia.url, e)}
+        {isMediaFailed(currentMedia.id) ? (
+          <MediaErrorFallback 
+            mediaId={currentMedia.id} 
+            onRetry={() => handleRetryMedia(currentMedia.id)} 
           />
-        )}
-        
-        {currentMedia.type === 'video' && (
-          <video
-            src={currentMedia.url}
-            className="max-w-full max-h-full object-contain"
-            style={{ maxWidth: '100vw', maxHeight: '100vh' }}
-            autoPlay={autoPlay}
-            muted={isMuted}
-            loop
-            playsInline
-            controls
-            onLoadedData={() => console.log('视频加载完成:', currentMedia.url)}
-            onError={(e) => console.error('视频加载失败:', currentMedia.url, e)}
-          />
-        )}
-        
-        {currentMedia.type === 'audio' && (
-          <div className="w-full max-w-md p-8 mx-4 bg-gradient-to-br from-purple-600 to-blue-600 rounded-2xl shadow-2xl">
-            <div className="text-center mb-6">
-              <div className="w-20 h-20 bg-white bg-opacity-20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Volume2 className="h-10 w-10 text-white" />
+        ) : (
+          <>
+            {currentMedia.type === 'image' && (
+              <img
+                src={currentMedia.url}
+                alt={currentMedia.caption}
+                className="max-w-full max-h-full object-contain"
+                style={{ maxWidth: '100vw', maxHeight: '100vh' }}
+                onLoad={() => console.log('图片加载完成:', currentMedia.url)}
+                onError={() => handleMediaError(currentMedia.id)}
+              />
+            )}
+            
+            {currentMedia.type === 'video' && (
+              <video
+                src={currentMedia.url}
+                className="max-w-full max-h-full object-contain"
+                style={{ maxWidth: '100vw', maxHeight: '100vh' }}
+                autoPlay={autoPlay}
+                muted={isMuted}
+                loop
+                playsInline
+                controls
+                onLoadedData={() => console.log('视频加载完成:', currentMedia.url)}
+                onError={() => handleMediaError(currentMedia.id)}
+              />
+            )}
+            
+            {currentMedia.type === 'audio' && (
+              <div className="w-full max-w-md p-8 mx-4 bg-gradient-to-br from-purple-600 to-blue-600 rounded-2xl shadow-2xl">
+                <div className="text-center mb-6">
+                  <div className="w-20 h-20 bg-white bg-opacity-20 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Volume2 className="h-10 w-10 text-white" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-white mb-2">音频播放中</h3>
+                  <p className="text-white text-opacity-80">{currentMedia.caption || '正在播放音频内容'}</p>
+                </div>
+                <audio
+                  src={currentMedia.url}
+                  className="w-full"
+                  controls
+                  autoPlay={autoPlay}
+                  muted={isMuted}
+                  onLoadedData={() => console.log('音频加载完成:', currentMedia.url)}
+                  onError={() => handleMediaError(currentMedia.id)}
+                />
               </div>
-              <h3 className="text-xl font-semibold text-white mb-2">音频播放中</h3>
-              <p className="text-white text-opacity-80">{currentMedia.caption || '正在播放音频内容'}</p>
-            </div>
-            <audio
-              src={currentMedia.url}
-              className="w-full"
-              controls
-              autoPlay={autoPlay}
-              muted={isMuted}
-              onLoadedData={() => console.log('音频加载完成:', currentMedia.url)}
-              onError={(e) => console.error('音频加载失败:', currentMedia.url, e)}
-            />
-          </div>
+            )}
+          </>
         )}
       </div>
 

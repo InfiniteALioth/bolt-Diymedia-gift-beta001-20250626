@@ -54,11 +54,17 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
 
     if (typeCount > 1) return '每次只能上传同一类型的媒体';
 
-    // Check file sizes (50MB limit as rough estimate)
+    // Reduced file size limit for localStorage compatibility (5MB per file)
     for (const file of files) {
-      if (file.size > 50 * 1024 * 1024) {
-        return `文件 "${file.name}" 过大，请选择小于50MB的文件`;
+      if (file.size > 5 * 1024 * 1024) {
+        return `文件 "${file.name}" 过大，请选择小于5MB的文件以确保能够保存`;
       }
+    }
+
+    // Check total size to prevent localStorage overflow
+    const totalSize = files.reduce((sum, file) => sum + file.size, 0);
+    if (totalSize > 10 * 1024 * 1024) {
+      return '所选文件总大小超过10MB，请减少文件数量或选择更小的文件';
     }
 
     return null;
@@ -172,15 +178,20 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
             <div className="mt-6 space-y-3">
               <div className="flex items-center space-x-3 text-sm text-gray-600">
                 <Image className="h-4 w-4" />
-                <span>图片：最多3张</span>
+                <span>图片：最多3张，每张小于5MB</span>
               </div>
               <div className="flex items-center space-x-3 text-sm text-gray-600">
                 <Video className="h-4 w-4" />
-                <span>视频：1个，限60秒</span>
+                <span>视频：1个，小于5MB</span>
               </div>
               <div className="flex items-center space-x-3 text-sm text-gray-600">
                 <Music className="h-4 w-4" />
-                <span>音频：1个，限60秒</span>
+                <span>音频：1个，小于5MB</span>
+              </div>
+              <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-xs text-yellow-800">
+                  <strong>注意：</strong>文件将保存在浏览器本地存储中，刷新页面后仍可查看。为确保正常保存，请选择较小的文件。
+                </p>
               </div>
             </div>
           </div>

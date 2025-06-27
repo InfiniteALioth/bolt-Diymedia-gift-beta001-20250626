@@ -6,6 +6,43 @@ interface MediaStorage {
   chatMessages: ChatMessage[];
 }
 
+// Helper function to convert File to Data URL
+const fileToDataURL = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+};
+
+// Helper function to create MediaItem from File with Data URL
+const createMediaItemFromFile = async (file: File, uploaderName: string, caption: string): Promise<MediaItem> => {
+  try {
+    const dataURL = await fileToDataURL(file);
+    
+    let type: 'image' | 'video' | 'audio';
+    if (file.type.startsWith('image/')) type = 'image';
+    else if (file.type.startsWith('video/')) type = 'video';
+    else if (file.type.startsWith('audio/')) type = 'audio';
+    else throw new Error('Unsupported file type');
+
+    return {
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      type,
+      url: dataURL, // Use Data URL instead of blob URL
+      caption,
+      uploaderName,
+      timestamp: Date.now(),
+      fileName: file.name,
+      fileSize: file.size
+    };
+  } catch (error) {
+    console.error('Failed to create media item from file:', error);
+    throw error;
+  }
+};
+
 export function useMediaStorage(pageId: string) {
   const storageKey = `mediaPage_${pageId}`;
   
@@ -25,6 +62,8 @@ export function useMediaStorage(pageId: string) {
       }
     } catch (error) {
       console.error('加载本地存储数据失败:', error);
+      // If parsing fails, clear the corrupted data
+      localStorage.removeItem(storageKey);
     } finally {
       setIsLoaded(true);
     }
@@ -41,16 +80,42 @@ export function useMediaStorage(pageId: string) {
       console.log('数据已保存到本地存储:', data);
     } catch (error) {
       console.error('保存到本地存储失败:', error);
+      // If storage fails due to quota exceeded, try to free up space
+      if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+        alert('存储空间不足，请删除一些旧的媒体文件后重试');
+      }
     }
   }, [storageKey]);
 
-  // 添加媒体项
-  const addMediaItems = useCallback((newItems: MediaItem[]) => {
-    setMediaItems(prev => {
-      const updated = [...prev, ...newItems];
-      saveToStorage(updated, chatMessages);
-      return updated;
-    });
+  // 添加媒体项 - 现在接受 File 数组并转换为 Data URL
+  const addMediaItems = useCallback(async (files: File[], uploaderName: string, caption: string) => {
+    try {
+      console.log('开始处理文件:', files.length);
+      const newItems: MediaItem[] = [];
+      
+      for (const file of files) {
+        try {
+          const mediaItem = await createMediaItemFromFile(file, uploaderName, caption);
+          newItems.push(mediaItem);
+          console.log('文件处理完成:', file.name, '-> Data URL长度:', mediaItem.url.length);
+        } catch (error) {
+          console.error('处理文件失败:', file.name, error);
+          alert(`处理文件 "${file.name}" 失败，请重试`);
+        }
+      }
+
+      if (newItems.length > 0) {
+        setMediaItems(prev => {
+          const updated = [...prev, ...newItems];
+          saveToStorage(updated, chatMessages);
+          return updated;
+        });
+        console.log('成功添加', newItems.length, '个媒体项');
+      }
+    } catch (error) {
+      console.error('添加媒体项失败:', error);
+      alert('添加媒体失败，请重试');
+    }
   }, [chatMessages, saveToStorage]);
 
   // 删除媒体项
