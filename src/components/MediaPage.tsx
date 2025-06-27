@@ -139,14 +139,6 @@ const MediaPage: React.FC = () => {
         onAutoPlayChange={handleAutoPlayChange}
       />
 
-      {/* Upload Button */}
-      <button
-        onClick={() => setShowUpload(true)}
-        className="absolute top-20 right-4 z-40 w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 rounded-full flex items-center justify-center text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
-      >
-        <Upload className="h-6 w-6" />
-      </button>
-
       {/* Chat Panel */}
       <ChatPanel
         messages={chatMessages}
