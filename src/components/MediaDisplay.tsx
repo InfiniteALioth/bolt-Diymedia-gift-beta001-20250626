@@ -20,7 +20,6 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
 }) => {
   const [failedMedia, setFailedMedia] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
-  const [autoPlayEnabled, setAutoPlayEnabled] = useState(autoPlay);
 
   const currentMedia = mediaItems[currentIndex];
 
@@ -29,25 +28,32 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
     currentIndex,
     currentMedia: currentMedia ? currentMedia.type : 'none',
     isLoading,
-    autoPlay,
-    autoPlayEnabled
+    autoPlay: autoPlay,
+    onAutoPlayChange: !!onAutoPlayChange
   });
 
-  // 同步外部 autoPlay 状态
+  // 自动播放逻辑 - 直接使用传入的 autoPlay 状态
   useEffect(() => {
-    console.log('同步外部 autoPlay 状态:', autoPlay);
-    setAutoPlayEnabled(autoPlay);
-  }, [autoPlay]);
+    console.log('自动播放效果触发:', { autoPlay, mediaItemsLength: mediaItems.length, currentIndex });
+    
+    if (!autoPlay || mediaItems.length <= 1) {
+      console.log('自动播放条件不满足:', { autoPlay, mediaItemsLength: mediaItems.length });
+      return;
+    }
 
-  useEffect(() => {
-    if (!autoPlayEnabled || mediaItems.length <= 1) return;
-
+    console.log('设置自动播放定时器，3秒后切换');
     const interval = setInterval(() => {
-      onIndexChange((currentIndex + 1) % mediaItems.length);
+      console.log('自动播放定时器触发，切换到下一个媒体');
+      const nextIndex = (currentIndex + 1) % mediaItems.length;
+      console.log('切换索引:', currentIndex, '->', nextIndex);
+      onIndexChange(nextIndex);
     }, 3000);
 
-    return () => clearInterval(interval);
-  }, [currentIndex, mediaItems.length, autoPlayEnabled, onIndexChange]);
+    return () => {
+      console.log('清除自动播放定时器');
+      clearInterval(interval);
+    };
+  }, [currentIndex, mediaItems.length, autoPlay, onIndexChange]);
 
   useEffect(() => {
     // 当媒体项改变时重置加载状态
@@ -59,12 +65,14 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
   const handlePrevious = () => {
     if (mediaItems.length === 0) return;
     const newIndex = currentIndex === 0 ? mediaItems.length - 1 : currentIndex - 1;
+    console.log('手动切换到上一个:', currentIndex, '->', newIndex);
     onIndexChange(newIndex);
   };
 
   const handleNext = () => {
     if (mediaItems.length === 0) return;
     const newIndex = (currentIndex + 1) % mediaItems.length;
+    console.log('手动切换到下一个:', currentIndex, '->', newIndex);
     onIndexChange(newIndex);
   };
 
@@ -89,7 +97,9 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
   };
 
   const handleVideoEnded = () => {
-    if (autoPlayEnabled && mediaItems.length > 1) {
+    console.log('视频播放结束');
+    if (autoPlay && mediaItems.length > 1) {
+      console.log('视频结束，3秒后自动切换');
       // 视频结束后等待3秒自动切换
       setTimeout(() => {
         handleNext();
@@ -97,12 +107,19 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
     }
   };
 
-  // 处理自动播放切换
+  // 处理自动播放切换 - 这是关键函数！
   const handleAutoPlayToggle = () => {
-    const newAutoPlay = !autoPlayEnabled;
-    console.log('切换自动播放状态:', autoPlayEnabled, '->', newAutoPlay);
-    setAutoPlayEnabled(newAutoPlay);
-    onAutoPlayChange?.(newAutoPlay);
+    const newAutoPlay = !autoPlay;
+    console.log('🔄 自动播放按钮被点击!');
+    console.log('当前状态:', autoPlay, '-> 新状态:', newAutoPlay);
+    
+    // 立即调用父组件的回调函数
+    if (onAutoPlayChange) {
+      console.log('调用父组件回调函数');
+      onAutoPlayChange(newAutoPlay);
+    } else {
+      console.error('❌ onAutoPlayChange 回调函数不存在!');
+    }
   };
 
   const isMediaFailed = (mediaId: string) => failedMedia.has(mediaId);
@@ -203,7 +220,7 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
             {currentMedia.type === 'video' && (
               <VideoPlayer
                 src={currentMedia.url}
-                autoPlay={autoPlayEnabled}
+                autoPlay={autoPlay}
                 loop={false}
                 onEnded={handleVideoEnded}
                 onError={() => handleMediaError(currentMedia.id)}
@@ -225,7 +242,7 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
                   src={currentMedia.url}
                   className="w-full"
                   controls
-                  autoPlay={autoPlayEnabled}
+                  autoPlay={autoPlay}
                   preload="metadata"
                   onLoadedData={handleMediaLoad}
                   onError={() => handleMediaError(currentMedia.id)}
@@ -247,17 +264,21 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
         </div>
       </div>
 
-      {/* Auto-play Toggle - 修复功能 */}
+      {/* Auto-play Toggle - 关键修复！ */}
       <div className="absolute top-4 left-4">
         <button
           onClick={handleAutoPlayToggle}
-          className={`px-3 py-1 rounded-full text-sm font-medium transition-all duration-200 transform hover:scale-105 ${
-            autoPlayEnabled 
-              ? 'bg-green-500 text-white shadow-lg hover:bg-green-600' 
-              : 'bg-white bg-opacity-20 text-white hover:bg-opacity-30 backdrop-blur-sm'
+          className={`px-3 py-1 rounded-full text-sm font-medium transition-all duration-200 transform hover:scale-105 active:scale-95 ${
+            autoPlay 
+              ? 'bg-green-500 text-white shadow-lg hover:bg-green-600 hover:shadow-xl' 
+              : 'bg-white bg-opacity-20 text-white hover:bg-opacity-30 backdrop-blur-sm border border-white border-opacity-30'
           }`}
+          style={{
+            minWidth: '80px',
+            cursor: 'pointer'
+          }}
         >
-          {autoPlayEnabled ? '自动播放' : '手动切换'}
+          {autoPlay ? '🟢 自动播放' : '⚪ 手动切换'}
         </button>
       </div>
 
@@ -294,6 +315,11 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
           ))}
         </div>
       )}
+
+      {/* 调试信息 - 临时添加，帮助调试 */}
+      <div className="absolute bottom-4 left-4 bg-black bg-opacity-50 text-white text-xs p-2 rounded">
+        自动播放状态: {autoPlay ? '开启' : '关闭'}
+      </div>
     </div>
   );
 };

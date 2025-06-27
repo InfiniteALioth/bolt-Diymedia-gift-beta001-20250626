@@ -95,17 +95,24 @@ const MediaPage: React.FC = () => {
   };
 
   const handlePauseAutoPlay = () => {
+    console.log('暂停自动播放被调用');
     setAutoPlay(false);
   };
 
+  // 关键修复：自动播放状态变化处理函数
   const handleAutoPlayChange = (newAutoPlay: boolean) => {
+    console.log('🔄 MediaPage 收到自动播放状态变化:', autoPlay, '->', newAutoPlay);
     setAutoPlay(newAutoPlay);
   };
 
   // 调试信息
-  console.log('当前媒体项数量:', mediaItems.length);
-  console.log('当前媒体索引:', currentMediaIndex);
-  console.log('聊天消息数量:', chatMessages.length);
+  console.log('MediaPage 渲染状态:', {
+    mediaItemsCount: mediaItems.length,
+    currentMediaIndex,
+    chatMessagesCount: chatMessages.length,
+    autoPlay,
+    user: user?.username
+  });
 
   return (
     <div className="w-full h-screen bg-black overflow-hidden relative">
@@ -123,7 +130,7 @@ const MediaPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Media Display */}
+      {/* Media Display - 确保传递正确的回调函数 */}
       <MediaDisplay
         mediaItems={mediaItems}
         currentIndex={currentMediaIndex}
@@ -167,6 +174,13 @@ const MediaPage: React.FC = () => {
           onComplete={handleUsernameUpdate}
         />
       )}
+
+      {/* 调试信息面板 - 临时添加 */}
+      <div className="absolute top-4 right-20 bg-black bg-opacity-50 text-white text-xs p-2 rounded z-50">
+        <div>自动播放: {autoPlay ? '开启' : '关闭'}</div>
+        <div>媒体数量: {mediaItems.length}</div>
+        <div>当前索引: {currentMediaIndex}</div>
+      </div>
     </div>
   );
 };
