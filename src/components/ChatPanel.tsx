@@ -95,10 +95,21 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             placeholder="说点什么吧..."
-            className="w-full px-4 py-1.5 bg-white bg-opacity-20 backdrop-blur-sm border border-white border-opacity-30 rounded-xl text-white placeholder-white placeholder-opacity-60 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center"
+            className="w-full px-4 py-1.5 bg-white bg-opacity-20 backdrop-blur-sm border border-white border-opacity-30 rounded-xl text-white placeholder-white placeholder-opacity-60 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-left flex items-center"
             maxLength={200}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              textAlign: 'left'
+            }}
           />
-          <div className="absolute right-3 top-1.5 text-xs text-white text-opacity-60">
+          <div 
+            className="absolute right-3 text-xs text-white text-opacity-60 flex items-center"
+            style={{
+              top: '50%',
+              transform: 'translateY(-50%)'
+            }}
+          >
             {byteLength}/120
           </div>
         </div>
