@@ -6,7 +6,7 @@ import MediaDisplay from './MediaDisplay';
 import ChatPanel from './ChatPanel';
 import MediaUpload from './MediaUpload';
 import UserSetup from './UserSetup';
-import { Upload, User, Trash2 } from 'lucide-react';
+import { Upload, User } from 'lucide-react';
 
 const MediaPage: React.FC = () => {
   const { user, createUser, updateUsername } = useAuth();
@@ -82,13 +82,6 @@ const MediaPage: React.FC = () => {
     setShowUserEdit(false);
   };
 
-  const handleClearAllData = () => {
-    if (confirm('确定要清空所有媒体和聊天记录吗？此操作不可恢复。')) {
-      clearAllData();
-      setCurrentMediaIndex(0);
-    }
-  };
-
   // 调试信息
   console.log('当前媒体项数量:', mediaItems.length);
   console.log('当前媒体索引:', currentMediaIndex);
@@ -98,31 +91,7 @@ const MediaPage: React.FC = () => {
     <div className="w-full h-screen bg-black overflow-hidden relative">
       {/* Header */}
       <div className="absolute top-0 left-0 right-0 z-40 bg-gradient-to-b from-black/50 to-transparent">
-        <div className="flex items-start justify-between p-4">
-          {/* 左侧按钮组 - 移除自动播放按钮 */}
-          <div className="flex flex-col space-y-4">
-            {/* 数据统计显示 */}
-            <div className="flex flex-col space-y-2">
-              <div className="px-3 py-1 bg-blue-500 bg-opacity-80 text-white text-xs rounded-full text-center min-w-max">
-                媒体: {mediaItems.length}
-              </div>
-              <div className="px-3 py-1 bg-purple-500 bg-opacity-80 text-white text-xs rounded-full text-center min-w-max">
-                消息: {chatMessages.length}
-              </div>
-            </div>
-
-            {/* 清空数据按钮 */}
-            {(mediaItems.length > 0 || chatMessages.length > 0) && (
-              <button
-                onClick={handleClearAllData}
-                className="px-3 py-1 bg-red-500 bg-opacity-80 text-white text-xs rounded-full hover:bg-opacity-100 transition-all duration-200 flex items-center justify-center space-x-1 min-w-max"
-              >
-                <Trash2 className="h-3 w-3" />
-                <span>清空</span>
-              </button>
-            )}
-          </div>
-          
+        <div className="flex items-center justify-end p-4">
           {/* 右侧用户按钮 */}
           <button
             onClick={() => setShowUserEdit(true)}
