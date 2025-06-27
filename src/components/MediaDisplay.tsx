@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MediaItem } from '../types';
-import { Play, Pause, Volume2, VolumeX, ChevronUp, ChevronDown, AlertCircle, RefreshCw } from 'lucide-react';
+import { Play, ChevronUp, ChevronDown, AlertCircle, RefreshCw } from 'lucide-react';
 
 interface MediaDisplayProps {
   mediaItems: MediaItem[];
@@ -15,8 +15,6 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
   onIndexChange,
   autoPlay
 }) => {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
   const [failedMedia, setFailedMedia] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
 
@@ -184,7 +182,6 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
                   height: 'auto'
                 }}
                 autoPlay={autoPlay}
-                muted={isMuted}
                 loop
                 playsInline
                 controls
@@ -198,7 +195,7 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
               <div className="w-full max-w-md p-8 mx-4 bg-gradient-to-br from-purple-600 to-blue-600 rounded-2xl shadow-2xl">
                 <div className="text-center mb-6">
                   <div className="w-20 h-20 bg-white bg-opacity-20 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Volume2 className="h-10 w-10 text-white" />
+                    <Play className="h-10 w-10 text-white" />
                   </div>
                   <h3 className="text-xl font-semibold text-white mb-2">音频播放中</h3>
                   <p className="text-white text-opacity-80">{currentMedia.caption || '正在播放音频内容'}</p>
@@ -208,7 +205,6 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
                   className="w-full"
                   controls
                   autoPlay={autoPlay}
-                  muted={isMuted}
                   preload="metadata"
                   onLoadedData={handleMediaLoad}
                   onError={() => handleMediaError(currentMedia.id)}
@@ -244,25 +240,6 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
             className="w-12 h-12 bg-white bg-opacity-20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-opacity-30 transition-all duration-200 active:scale-95"
           >
             <ChevronDown className="h-6 w-6" />
-          </button>
-        </div>
-      )}
-
-      {/* Media Controls */}
-      {(currentMedia.type === 'video' || currentMedia.type === 'audio') && (
-        <div className="absolute bottom-20 right-4 flex flex-col space-y-2">
-          <button
-            onClick={() => setIsPlaying(!isPlaying)}
-            className="w-12 h-12 bg-white bg-opacity-20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-opacity-30 transition-all duration-200 active:scale-95"
-          >
-            {isPlaying ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6" />}
-          </button>
-          
-          <button
-            onClick={() => setIsMuted(!isMuted)}
-            className="w-12 h-12 bg-white bg-opacity-20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-opacity-30 transition-all duration-200 active:scale-95"
-          >
-            {isMuted ? <VolumeX className="h-6 w-6" /> : <Volume2 className="h-6 w-6" />}
           </button>
         </div>
       )}
