@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChatMessage } from '../types';
-import { Send, ChevronUp, ChevronDown } from 'lucide-react';
+import { Send } from 'lucide-react';
 
 interface ChatPanelProps {
   messages: ChatMessage[];
@@ -14,19 +14,16 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
   onSendMessage
 }) => {
   const [inputValue, setInputValue] = useState('');
-  const [showHistory, setShowHistory] = useState(false);
-  const [visibleCount, setVisibleCount] = useState(6);
-  const inputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   const byteLength = new TextEncoder().encode(inputValue).length;
   const isValid = inputValue.trim().length > 0 && byteLength <= 120;
 
   useEffect(() => {
-    if (!showHistory) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [messages, showHistory]);
+    // 自动滚动到最新消息
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,50 +33,36 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
     }
   };
 
-  const displayedMessages = showHistory 
-    ? messages.slice(-visibleCount) 
-    : messages.slice(-6);
-
-  const canShowMore = messages.length > visibleCount;
-
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-black from-opacity-90 to-transparent p-4">
-      {/* Chat Messages */}
-      <div className="mb-4">
-        {/* History Navigation */}
-        {messages.length > 6 && (
-          <div className="flex justify-center mb-2">
-            <button
-              onClick={() => setShowHistory(!showHistory)}
-              className="px-3 py-1 bg-white bg-opacity-20 backdrop-blur-sm rounded-full text-white text-sm hover:bg-opacity-30 transition-all duration-200 flex items-center space-x-1"
-            >
-              {showHistory ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
-              <span>{showHistory ? '收起历史' : '查看历史'}</span>
-            </button>
-          </div>
-        )}
-
-        {showHistory && canShowMore && (
-          <div className="flex justify-center mb-2">
-            <button
-              onClick={() => setVisibleCount(prev => Math.min(prev + 10, messages.length))}
-              className="px-3 py-1 bg-white bg-opacity-10 backdrop-blur-sm rounded-full text-white text-opacity-70 text-sm hover:bg-opacity-20 transition-all duration-200"
-            >
-              加载更多消息
-            </button>
-          </div>
-        )}
-
-        {/* Messages List */}
-        <div className="space-y-2 max-h-64 overflow-y-auto">
-          {displayedMessages.map((message) => (
+    <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-4">
+      {/* Chat Messages - 高度缩小一半，宽度向左缩小三分之一 */}
+      <div className="mb-4 mr-[33%]">
+        {/* Messages List - 移除滚动条背景，高度从max-h-64改为max-h-32 */}
+        <div 
+          ref={messagesContainerRef}
+          className="space-y-2 max-h-32 overflow-y-auto scrollbar-hide"
+          style={{
+            /* 隐藏滚动条但保持滚动功能 */
+            scrollbarWidth: 'none', /* Firefox */
+            msOverflowStyle: 'none', /* IE and Edge */
+          }}
+        >
+          {messages.map((message) => (
             <div
               key={message.id}
-              className="bg-black bg-opacity-30 backdrop-blur-sm rounded-lg px-3 py-2 text-white"
+              className="inline-block bg-black/30 backdrop-blur-sm rounded-lg px-3 py-2 text-white max-w-full"
+              style={{
+                /* 消息背景根据文字长度自动调节，文字超出时自动换行 */
+                width: 'fit-content',
+                maxWidth: '100%',
+                wordWrap: 'break-word',
+                overflowWrap: 'break-word',
+                hyphens: 'auto'
+              }}
             >
               <span className="font-medium text-blue-400">{message.username}</span>
-              <span className="text-white text-opacity-70">: </span>
-              <span>{message.content}</span>
+              <span className="text-white/70">: </span>
+              <span className="break-words">{message.content}</span>
             </div>
           ))}
           <div ref={messagesEndRef} />
@@ -90,12 +73,11 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
       <form onSubmit={handleSubmit} className="flex space-x-3">
         <div className="flex-1 relative">
           <input
-            ref={inputRef}
             type="text"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             placeholder="说点什么吧..."
-            className="w-full px-4 py-1.5 bg-white bg-opacity-20 backdrop-blur-sm border border-white border-opacity-30 rounded-xl text-white placeholder-white placeholder-opacity-60 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-left flex items-center"
+            className="w-full px-4 py-1.5 bg-white/20 backdrop-blur-sm border border-white/30 rounded-xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-left flex items-center"
             maxLength={200}
             style={{
               display: 'flex',
@@ -104,7 +86,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
             }}
           />
           <div 
-            className="absolute right-3 text-xs text-white text-opacity-60 flex items-center"
+            className="absolute right-3 text-xs text-white/60 flex items-center"
             style={{
               top: '50%',
               transform: 'translateY(-50%)'
@@ -127,6 +109,17 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
           <span>发送</span>
         </button>
       </form>
+
+      {/* 添加CSS样式来隐藏滚动条 */}
+      <style jsx>{`
+        .scrollbar-hide {
+          -ms-overflow-style: none;  /* IE and Edge */
+          scrollbar-width: none;  /* Firefox */
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;  /* Chrome, Safari and Opera */
+        }
+      `}</style>
     </div>
   );
 };
