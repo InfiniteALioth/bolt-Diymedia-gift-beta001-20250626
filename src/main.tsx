@@ -80,9 +80,21 @@ function setupErrorHandling() {
   });
 }
 
+// 路由调试
+function setupRouteDebugging() {
+  console.log('应用启动 - 当前路径:', window.location.pathname);
+  console.log('应用启动 - 完整URL:', window.location.href);
+  
+  // 监听路由变化
+  window.addEventListener('popstate', () => {
+    console.log('路由变化:', window.location.pathname);
+  });
+}
+
 // 初始化
 initMobileCompatibility();
 setupErrorHandling();
+setupRouteDebugging();
 
 // 确保DOM加载完成后再渲染React应用
 function renderApp() {
@@ -103,6 +115,7 @@ function renderApp() {
       </StrictMode>
     );
     console.log('React应用渲染成功');
+    console.log('当前路径:', window.location.pathname);
   } catch (error) {
     console.error('React应用渲染失败:', error);
     // 显示错误信息
@@ -121,6 +134,7 @@ function renderApp() {
       ">
         <h2>应用启动失败</h2>
         <p>错误信息: ${error.message}</p>
+        <p>当前路径: ${window.location.pathname}</p>
         <button onclick="location.reload()" style="
           margin-top: 20px;
           padding: 10px 20px;
@@ -130,6 +144,15 @@ function renderApp() {
           border-radius: 5px;
           cursor: pointer;
         ">重新加载</button>
+        <button onclick="window.location.href='/'" style="
+          margin-top: 10px;
+          padding: 10px 20px;
+          background: #28a745;
+          color: white;
+          border: none;
+          border-radius: 5px;
+          cursor: pointer;
+        ">返回首页</button>
       </div>
     `;
   }
