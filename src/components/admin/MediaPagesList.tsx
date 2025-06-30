@@ -74,7 +74,6 @@ const MediaPagesList: React.FC<MediaPagesListProps> = ({ admin }) => {
     );
 
     if (needsUpdate) {
-      console.log('🔧 修复现有页面的链接格式');
       setPages(prev => prev.map(page => ({
         ...page,
         uniqueLink: generateUniqueLink(page.id)
@@ -102,7 +101,6 @@ const MediaPagesList: React.FC<MediaPagesListProps> = ({ admin }) => {
           uniqueLink: generateUniqueLink(p.id) // 确保链接格式正确
         } : p
       ));
-      console.log('✅ 页面更新成功:', pageData.name);
     } else {
       // 创建新页面
       const pageId = 'page_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
@@ -134,12 +132,6 @@ const MediaPagesList: React.FC<MediaPagesListProps> = ({ admin }) => {
       };
       
       setPages(prev => [newPage, ...prev]); // 新页面添加到顶部
-      console.log('✅ 新页面创建成功:', {
-        name: newPage.name,
-        id: newPage.id,
-        link: newPage.uniqueLink,
-        internalCode: newPage.internalCode
-      });
     }
     setShowEditor(false);
   };
@@ -148,7 +140,6 @@ const MediaPagesList: React.FC<MediaPagesListProps> = ({ admin }) => {
     const pageToDelete = pages.find(p => p.id === pageId);
     if (confirm(`确定要删除媒体页 "${pageToDelete?.name}" 吗？此操作不可恢复。`)) {
       setPages(prev => prev.filter(p => p.id !== pageId));
-      console.log('🗑️ 页面删除成功，剩余页面数:', pages.length - 1);
     }
   };
 
@@ -176,8 +167,6 @@ const MediaPagesList: React.FC<MediaPagesListProps> = ({ admin }) => {
         p.id === pageId ? { ...p, isActive: !currentStatus } : p
       ));
 
-      console.log(`✅ 页面 ${page.name} 已${action}成功`);
-      
       // 显示成功提示
       const successMessage = currentStatus 
         ? `媒体页 "${page.name}" 已暂停，用户将无法访问`
@@ -198,7 +187,7 @@ const MediaPagesList: React.FC<MediaPagesListProps> = ({ admin }) => {
       }, 3000);
 
     } catch (error) {
-      console.error(`❌ ${action}页面失败:`, error);
+      console.error(`${action}页面失败:`, error);
       alert(`${action}页面失败，请重试`);
     } finally {
       // 移除处理状态
@@ -211,13 +200,11 @@ const MediaPagesList: React.FC<MediaPagesListProps> = ({ admin }) => {
   };
 
   const handleOpenLink = (url: string) => {
-    console.log('🔗 尝试打开链接:', url);
     try {
       // 检查是否是内部链接
       if (url.includes(window.location.origin)) {
         // 内部链接，使用路由导航
         const path = url.replace(window.location.origin, '');
-        console.log('📍 内部链接，导航到:', path);
         window.location.href = path;
       } else {
         // 外部链接，在新标签页打开
@@ -233,7 +220,7 @@ const MediaPagesList: React.FC<MediaPagesListProps> = ({ admin }) => {
         }
       }
     } catch (error) {
-      console.error('❌ 打开链接失败:', error);
+      console.error('打开链接失败:', error);
       // 最后的回退方案
       window.location.href = url;
     }
@@ -267,9 +254,8 @@ const MediaPagesList: React.FC<MediaPagesListProps> = ({ admin }) => {
           return newSet;
         });
       }, 2000);
-      console.log(`📋 ${itemType}复制成功:`, text);
     } catch (error) {
-      console.error(`❌ 复制${itemType}失败:`, error);
+      console.error(`复制${itemType}失败:`, error);
       alert(`复制失败，请手动复制${itemType}`);
     }
   };
@@ -389,19 +375,6 @@ const MediaPagesList: React.FC<MediaPagesListProps> = ({ admin }) => {
             </p>
           </div>
         </div>
-
-        {/* 调试信息面板 - 仅在开发环境显示 */}
-        {process.env.NODE_ENV === 'development' && (
-          <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <h4 className="text-sm font-medium text-yellow-800 mb-2">🔧 调试信息</h4>
-            <div className="text-xs text-yellow-700 space-y-1">
-              <div>当前域名: {window.location.origin}</div>
-              <div>页面总数: {pages.length}</div>
-              <div>页面ID列表: {pages.map(p => p.id).join(', ')}</div>
-              <div>链接格式示例: {pages[0]?.uniqueLink}</div>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* 可滚动的页面列表容器 */}

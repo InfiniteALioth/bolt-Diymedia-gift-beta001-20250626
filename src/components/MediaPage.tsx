@@ -25,37 +25,20 @@ const MediaPage: React.FC = () => {
   // 获取存储的媒体页数据
   const [storedPages] = useLocalStorage<MediaPageType[]>('adminMediaPages', []);
 
-  // 确定当前页面ID - 改进的逻辑
+  // 确定当前页面ID
   const currentPageId = pageId || 'page_demo';
 
-  console.log('🔄 MediaPage 渲染:', { 
-    urlPageId: pageId,
-    currentPageId, 
-    storedPagesCount: storedPages.length,
-    storedPageIds: storedPages.map(p => ({ id: p.id, name: p.name, active: p.isActive }))
-  });
-
-  // 验证页面是否存在 - 改进的查找逻辑
+  // 验证页面是否存在
   useEffect(() => {
-    console.log('🔍 开始验证页面:', currentPageId);
-    console.log('📋 可用页面列表:', storedPages.map(p => ({ 
-      id: p.id, 
-      name: p.name, 
-      active: p.isActive,
-      internalCode: p.internalCode 
-    })));
-
     // 改进的页面查找逻辑
     let foundPage = storedPages.find(page => {
       // 1. 精确匹配页面ID
       if (page.id === currentPageId) {
-        console.log('✅ 通过页面ID匹配找到:', page.name);
         return true;
       }
       
       // 2. 匹配内部编码
       if (page.internalCode === currentPageId) {
-        console.log('✅ 通过内部编码匹配找到:', page.name);
         return true;
       }
       
@@ -63,7 +46,6 @@ const MediaPage: React.FC = () => {
       try {
         const linkPageId = page.uniqueLink.split('/page/')[1];
         if (linkPageId === currentPageId) {
-          console.log('✅ 通过链接匹配找到:', page.name);
           return true;
         }
       } catch (e) {
@@ -74,7 +56,6 @@ const MediaPage: React.FC = () => {
       try {
         const decodedPageId = decodeURIComponent(currentPageId);
         if (page.id === decodedPageId || page.internalCode === decodedPageId) {
-          console.log('✅ 通过解码匹配找到:', page.name);
           return true;
         }
       } catch (e) {
@@ -85,16 +66,9 @@ const MediaPage: React.FC = () => {
     });
 
     if (foundPage) {
-      console.log('✅ 页面验证成功:', {
-        name: foundPage.name,
-        id: foundPage.id,
-        active: foundPage.isActive,
-        internalCode: foundPage.internalCode
-      });
       setPageData(foundPage);
       setPageNotFound(false);
     } else if (currentPageId === 'page_demo') {
-      console.log('🎯 使用默认演示页面');
       // 默认演示页面
       const demoPage: MediaPageType = {
         id: 'page_demo',
@@ -124,16 +98,6 @@ const MediaPage: React.FC = () => {
       setPageData(demoPage);
       setPageNotFound(false);
     } else {
-      console.log('❌ 页面未找到:', currentPageId);
-      console.log('🔍 调试信息:', {
-        searchingFor: currentPageId,
-        availablePages: storedPages.map(p => ({
-          id: p.id,
-          name: p.name,
-          internalCode: p.internalCode,
-          link: p.uniqueLink
-        }))
-      });
       setPageNotFound(true);
     }
   }, [currentPageId, storedPages]);
@@ -199,29 +163,6 @@ const MediaPage: React.FC = () => {
                 <span>管理后台</span>
               </button>
             </div>
-            <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg text-left">
-              <h4 className="text-sm font-medium text-blue-800 mb-2">🔧 调试信息</h4>
-              <div className="text-xs text-blue-700 space-y-1">
-                <div><strong>请求的页面ID:</strong> {currentPageId}</div>
-                <div><strong>URL参数:</strong> {pageId || '无'}</div>
-                <div><strong>可用页面数:</strong> {storedPages.length}</div>
-                {storedPages.length > 0 && (
-                  <div>
-                    <strong>可用页面列表:</strong>
-                    <ul className="mt-1 ml-2 space-y-1">
-                      {storedPages.slice(0, 3).map(p => (
-                        <li key={p.id} className="text-xs">
-                          • {p.name} ({p.id})
-                        </li>
-                      ))}
-                      {storedPages.length > 3 && (
-                        <li className="text-xs">... 还有 {storedPages.length - 3} 个页面</li>
-                      )}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -274,17 +215,12 @@ const MediaPage: React.FC = () => {
           </div>
           <h3 className="text-xl font-semibold mb-2">加载中...</h3>
           <p className="text-gray-300 mb-4">正在加载媒体内容</p>
-          <div className="text-sm text-gray-400">
-            页面: {pageData?.name || currentPageId}
-          </div>
         </div>
       </div>
     );
   }
 
   const handleMediaUpload = async (files: File[], caption: string) => {
-    console.log('📤 开始处理媒体上传:', files.length, '个文件，目标页面:', currentPageId);
-    
     // 如果这是第一次上传，设置当前索引为0
     if (mediaItems.length === 0) {
       setCurrentMediaIndex(0);
@@ -328,27 +264,13 @@ const MediaPage: React.FC = () => {
   };
 
   const handlePauseAutoPlay = () => {
-    console.log('⏸️ 暂停自动播放被调用');
     setAutoPlay(false);
   };
 
   // 自动播放状态变化处理函数
   const handleAutoPlayChange = (newAutoPlay: boolean) => {
-    console.log('🔄 MediaPage 收到自动播放状态变化:', autoPlay, '->', newAutoPlay);
     setAutoPlay(newAutoPlay);
   };
-
-  // 调试信息
-  console.log('📊 MediaPage 当前状态:', {
-    pageId: currentPageId,
-    pageName: pageData?.name,
-    mediaItemsCount: mediaItems.length,
-    currentMediaIndex,
-    chatMessagesCount: chatMessages.length,
-    autoPlay,
-    user: user?.username,
-    isActive: pageData?.isActive
-  });
 
   return (
     <div className="w-full h-screen bg-black overflow-hidden relative">
@@ -363,12 +285,6 @@ const MediaPage: React.FC = () => {
             {pageData.usageScenario && (
               <div className="bg-blue-500 bg-opacity-20 backdrop-blur-sm rounded-lg px-2 py-1">
                 <span className="text-blue-200 text-xs">{pageData.usageScenario}</span>
-              </div>
-            )}
-            {/* 页面ID显示（开发模式） */}
-            {process.env.NODE_ENV === 'development' && (
-              <div className="bg-yellow-500 bg-opacity-20 backdrop-blur-sm rounded-lg px-2 py-1">
-                <span className="text-yellow-200 text-xs">ID: {currentPageId}</span>
               </div>
             )}
           </div>
@@ -435,17 +351,6 @@ const MediaPage: React.FC = () => {
           usedStorage={usedStorage}
           totalStorage={totalStorage}
         />
-      )}
-
-      {/* 开发模式调试面板 */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="absolute bottom-4 left-4 bg-black bg-opacity-75 text-white p-3 rounded-lg text-xs max-w-xs">
-          <div><strong>调试信息:</strong></div>
-          <div>页面ID: {currentPageId}</div>
-          <div>媒体数: {mediaItems.length}</div>
-          <div>消息数: {chatMessages.length}</div>
-          <div>状态: {pageData?.isActive ? '活跃' : '暂停'}</div>
-        </div>
       )}
     </div>
   );
