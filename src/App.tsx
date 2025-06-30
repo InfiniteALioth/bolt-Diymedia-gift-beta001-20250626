@@ -11,7 +11,7 @@ function App() {
   return (
     <Router>
       <Routes>
-        {/* Public Media Page Route */}
+        {/* Public Media Page Routes */}
         <Route path="/" element={<MediaPage />} />
         <Route path="/page/:pageId" element={<MediaPage />} />
         

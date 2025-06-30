@@ -29,7 +29,7 @@ const MediaPagesList: React.FC<MediaPagesListProps> = ({ admin }) => {
       discountRecords: [],
       purchaserGender: 'male',
       usageScenario: '婚礼纪念',
-      uniqueLink: 'https://media.example.com/page/demo',
+      uniqueLink: `${window.location.origin}/page/page_demo`,
       qrCode: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCI+PHJlY3Qgd2lkdGg9IjEwMCIgaGVpZ2h0PSIxMDAiIGZpbGw9IiNmZmYiLz48L3N2Zz4=',
       internalCode: 'DEMO001',
       productDetails: {
@@ -60,15 +60,9 @@ const MediaPagesList: React.FC<MediaPagesListProps> = ({ admin }) => {
     return `${prefix}${timestamp}${random}`;
   };
 
-  // 生成唯一链接
-  const generateUniqueLink = (name: string) => {
-    const slug = name.toLowerCase()
-      .replace(/[^\w\s-]/g, '') // 移除特殊字符
-      .replace(/\s+/g, '-') // 空格替换为连字符
-      .replace(/-+/g, '-') // 多个连字符合并为一个
-      .trim();
-    const timestamp = Date.now();
-    return `https://media.example.com/page/${slug}-${timestamp}`;
+  // 生成唯一链接 - 修复为正确的路由格式
+  const generateUniqueLink = (pageId: string) => {
+    return `${window.location.origin}/page/${pageId}`;
   };
 
   const handleCreatePage = () => {
@@ -85,13 +79,18 @@ const MediaPagesList: React.FC<MediaPagesListProps> = ({ admin }) => {
     if (editingPage) {
       // 更新现有页面
       setPages(prev => prev.map(p => 
-        p.id === editingPage.id ? { ...p, ...pageData } : p
+        p.id === editingPage.id ? { 
+          ...p, 
+          ...pageData,
+          uniqueLink: generateUniqueLink(p.id) // 确保链接格式正确
+        } : p
       ));
       console.log('页面更新成功:', pageData.name);
     } else {
       // 创建新页面
+      const pageId = 'page_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
       const newPage: MediaPage = {
-        id: 'page_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+        id: pageId,
         name: pageData.name || '',
         purchaserName: pageData.purchaserName || '',
         purchaserEmail: pageData.purchaserEmail || '',
@@ -100,7 +99,7 @@ const MediaPagesList: React.FC<MediaPagesListProps> = ({ admin }) => {
         discountRecords: [],
         purchaserGender: pageData.purchaserGender || 'other',
         usageScenario: pageData.usageScenario || '',
-        uniqueLink: generateUniqueLink(pageData.name || ''),
+        uniqueLink: generateUniqueLink(pageId), // 使用正确的路由格式
         qrCode: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCI+PHJlY3Qgd2lkdGg9IjEwMCIgaGVpZ2h0PSIxMDAiIGZpbGw9IiNmZmYiLz48L3N2Zz4=',
         internalCode: generateInternalCode(),
         productDetails: pageData.productDetails || {
@@ -118,7 +117,7 @@ const MediaPagesList: React.FC<MediaPagesListProps> = ({ admin }) => {
       };
       
       setPages(prev => [newPage, ...prev]); // 新页面添加到顶部
-      console.log('新页面创建成功:', newPage.name, '总页面数:', pages.length + 1);
+      console.log('新页面创建成功:', newPage.name, '页面ID:', newPage.id, '链接:', newPage.uniqueLink);
     }
     setShowEditor(false);
   };
@@ -132,17 +131,24 @@ const MediaPagesList: React.FC<MediaPagesListProps> = ({ admin }) => {
   };
 
   const handleOpenLink = (url: string) => {
-    // 尝试多种方式打开链接，提高移动端兼容性
+    console.log('尝试打开链接:', url);
     try {
-      // 方法1: 直接赋值给 window.location（在同一标签页打开）
-      if (window.innerWidth <= 768) { // 移动端设备
-        window.location.href = url;
+      // 检查是否是内部链接
+      if (url.includes(window.location.origin)) {
+        // 内部链接，使用路由导航
+        const path = url.replace(window.location.origin, '');
+        window.location.href = path;
       } else {
-        // 桌面端尝试新标签页
-        const newWindow = window.open(url, '_blank', 'noopener,noreferrer');
-        if (!newWindow) {
-          // 如果弹窗被阻止，回退到同一标签页
+        // 外部链接，在新标签页打开
+        if (window.innerWidth <= 768) { // 移动端设备
           window.location.href = url;
+        } else {
+          // 桌面端尝试新标签页
+          const newWindow = window.open(url, '_blank', 'noopener,noreferrer');
+          if (!newWindow) {
+            // 如果弹窗被阻止，回退到同一标签页
+            window.location.href = url;
+          }
         }
       }
     } catch (error) {
@@ -178,6 +184,7 @@ const MediaPagesList: React.FC<MediaPagesListProps> = ({ admin }) => {
           return newSet;
         });
       }, 2000);
+      console.log('链接复制成功:', url);
     } catch (error) {
       console.error('复制链接失败:', error);
       alert('复制失败，请手动复制链接');
@@ -341,6 +348,7 @@ const MediaPagesList: React.FC<MediaPagesListProps> = ({ admin }) => {
                         </span>
                       </div>
                       <p className="text-sm text-gray-500">内部编码: {page.internalCode}</p>
+                      <p className="text-xs text-gray-400 mt-1">页面ID: {page.id}</p>
                     </div>
                     <div className="flex items-center space-x-2">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -450,6 +458,13 @@ const MediaPagesList: React.FC<MediaPagesListProps> = ({ admin }) => {
                         </button>
                       </div>
                     </div>
+                  </div>
+
+                  {/* 显示完整链接 */}
+                  <div className="mt-3 p-2 bg-gray-50 rounded-lg">
+                    <p className="text-xs text-gray-600 break-all">
+                      <strong>访问链接:</strong> {page.uniqueLink}
+                    </p>
                   </div>
 
                   {/* Usage Bar */}
