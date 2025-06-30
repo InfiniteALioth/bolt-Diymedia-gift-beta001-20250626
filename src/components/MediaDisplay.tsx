@@ -277,10 +277,10 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
         )}
       </div>
 
-      {/* Media Info Overlay - 修改后的布局 */}
+      {/* Media Info Overlay - 修正后的布局逻辑 */}
       <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/70 via-black/40 to-transparent p-6 pt-20">
         <div className="max-w-4xl mx-auto px-4">
-          {/* 完整显示说明文字 - 支持自动换行 */}
+          {/* 有说明文字时：显示 "说明文字 — 由 上传者名称 上传" */}
           {currentMedia.caption && currentMedia.caption.trim() && (
             <div 
               className="bg-black/30 backdrop-blur-sm rounded-2xl border border-white/10"
@@ -299,7 +299,9 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
                 >
                   {currentMedia.caption}
                   <span className="text-white/70 mx-2">—</span>
+                  <span className="text-white/70">由 </span>
                   <span className="text-blue-300 font-medium">{currentMedia.uploaderName}</span>
+                  <span className="text-white/70"> 上传</span>
                 </div>
               </div>
             </div>
