@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { MediaPage } from '../../types';
-import { X, Upload, Trash2 } from 'lucide-react';
+import { X, Upload, Trash2, Play, Pause } from 'lucide-react';
 
 interface MediaPageEditorProps {
   page: MediaPage | null;
@@ -22,6 +22,7 @@ const MediaPageEditor: React.FC<MediaPageEditorProps> = ({
     usageScenario: page?.usageScenario || '',
     dbSizeLimit: page?.dbSizeLimit || 1024,
     usageDuration: page?.usageDuration || 30,
+    isActive: page?.isActive !== undefined ? page.isActive : true,
     productDetails: {
       name: page?.productDetails.name || '',
       link: page?.productDetails.link || '',
@@ -52,6 +53,11 @@ const MediaPageEditor: React.FC<MediaPageEditorProps> = ({
     }));
   };
 
+  const handleToggleStatus = () => {
+    const newStatus = !formData.isActive;
+    setFormData(prev => ({ ...prev, isActive: newStatus }));
+  };
+
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-screen overflow-y-auto">
@@ -70,6 +76,95 @@ const MediaPageEditor: React.FC<MediaPageEditorProps> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {/* 页面状态控制 */}
+          <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-xl p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              {formData.isActive ? (
+                <Play className="h-5 w-5 text-green-600 mr-2" />
+              ) : (
+                <Pause className="h-5 w-5 text-orange-600 mr-2" />
+              )}
+              页面状态控制
+            </h3>
+            
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="text-base font-medium text-gray-900 mb-1">
+                  页面访问状态
+                </h4>
+                <p className="text-sm text-gray-600">
+                  {formData.isActive 
+                    ? '页面当前处于活跃状态，用户可以正常访问和使用所有功能'
+                    : '页面当前已暂停，用户无法访问此页面'
+                  }
+                </p>
+              </div>
+              
+              <button
+                type="button"
+                onClick={handleToggleStatus}
+                className={`flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 ${
+                  formData.isActive
+                    ? 'bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white'
+                    : 'bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white'
+                }`}
+              >
+                {formData.isActive ? (
+                  <>
+                    <Pause className="h-5 w-5" />
+                    <span>暂停页面</span>
+                  </>
+                ) : (
+                  <>
+                    <Play className="h-5 w-5" />
+                    <span>继续页面</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* 状态说明 */}
+            <div className={`mt-4 p-4 rounded-lg border ${
+              formData.isActive 
+                ? 'bg-green-50 border-green-200' 
+                : 'bg-orange-50 border-orange-200'
+            }`}>
+              <div className="flex items-start space-x-3">
+                {formData.isActive ? (
+                  <Play className="h-5 w-5 text-green-600 mt-0.5" />
+                ) : (
+                  <Pause className="h-5 w-5 text-orange-600 mt-0.5" />
+                )}
+                <div>
+                  <h5 className={`font-medium ${
+                    formData.isActive ? 'text-green-800' : 'text-orange-800'
+                  }`}>
+                    {formData.isActive ? '页面活跃状态' : '页面暂停状态'}
+                  </h5>
+                  <ul className={`text-sm mt-2 space-y-1 ${
+                    formData.isActive ? 'text-green-700' : 'text-orange-700'
+                  }`}>
+                    {formData.isActive ? (
+                      <>
+                        <li>• 用户可以正常访问页面</li>
+                        <li>• 可以上传和查看媒体内容</li>
+                        <li>• 聊天功能正常工作</li>
+                        <li>• 所有交互功能可用</li>
+                      </>
+                    ) : (
+                      <>
+                        <li>• 用户无法访问页面</li>
+                        <li>• 显示"页面已停用"提示</li>
+                        <li>• 所有功能暂时不可用</li>
+                        <li>• 数据保持完整，可随时恢复</li>
+                      </>
+                    )}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Basic Information */}
           <div className="bg-gray-50 rounded-xl p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">基本信息</h3>
@@ -241,20 +336,36 @@ const MediaPageEditor: React.FC<MediaPageEditorProps> = ({
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-6 py-3 text-gray-600 hover:text-gray-800 transition-colors duration-200"
-            >
-              取消
-            </button>
-            <button
-              type="submit"
-              className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-lg hover:from-purple-600 hover:to-pink-700 transition-all duration-200 shadow-lg hover:shadow-xl"
-            >
-              {page ? '保存修改' : '创建页面'}
-            </button>
+          <div className="flex justify-between items-center pt-6 border-t border-gray-200">
+            <div className="flex items-center space-x-2 text-sm text-gray-600">
+              {formData.isActive ? (
+                <div className="flex items-center space-x-2 text-green-600">
+                  <Play className="h-4 w-4" />
+                  <span>页面将保持活跃状态</span>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-2 text-orange-600">
+                  <Pause className="h-4 w-4" />
+                  <span>页面将保持暂停状态</span>
+                </div>
+              )}
+            </div>
+            
+            <div className="flex space-x-4">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-6 py-3 text-gray-600 hover:text-gray-800 transition-colors duration-200"
+              >
+                取消
+              </button>
+              <button
+                type="submit"
+                className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-lg hover:from-purple-600 hover:to-pink-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+              >
+                {page ? '保存修改' : '创建页面'}
+              </button>
+            </div>
           </div>
         </form>
       </div>

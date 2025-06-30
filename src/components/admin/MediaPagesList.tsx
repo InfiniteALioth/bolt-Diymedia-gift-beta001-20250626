@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MediaPage, Admin } from '../../types';
-import { Plus, ExternalLink, QrCode, Settings, Trash2, Calendar, Database, Users, Copy, Check, Search, Filter } from 'lucide-react';
+import { Plus, ExternalLink, QrCode, Settings, Trash2, Calendar, Database, Users, Copy, Check, Search, Filter, Pause, Play } from 'lucide-react';
 import MediaPageEditor from './MediaPageEditor';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
 
@@ -51,6 +51,7 @@ const MediaPagesList: React.FC<MediaPagesListProps> = ({ admin }) => {
   const [copiedLinks, setCopiedLinks] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
+  const [processingPages, setProcessingPages] = useState<Set<string>>(new Set());
 
   // 生成唯一的内部编码
   const generateInternalCode = () => {
@@ -127,6 +128,64 @@ const MediaPagesList: React.FC<MediaPagesListProps> = ({ admin }) => {
     if (confirm(`确定要删除媒体页 "${pageToDelete?.name}" 吗？此操作不可恢复。`)) {
       setPages(prev => prev.filter(p => p.id !== pageId));
       console.log('页面删除成功，剩余页面数:', pages.length - 1);
+    }
+  };
+
+  // 暂停/继续页面功能
+  const handleTogglePageStatus = async (pageId: string, currentStatus: boolean) => {
+    const page = pages.find(p => p.id === pageId);
+    if (!page) return;
+
+    const action = currentStatus ? '暂停' : '继续';
+    const confirmMessage = currentStatus 
+      ? `确定要暂停媒体页 "${page.name}" 吗？暂停后用户将无法访问该页面。`
+      : `确定要继续媒体页 "${page.name}" 吗？继续后用户将可以正常访问该页面。`;
+
+    if (!confirm(confirmMessage)) return;
+
+    // 添加处理状态
+    setProcessingPages(prev => new Set([...prev, pageId]));
+
+    try {
+      // 模拟API调用延迟
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // 更新页面状态
+      setPages(prev => prev.map(p => 
+        p.id === pageId ? { ...p, isActive: !currentStatus } : p
+      ));
+
+      console.log(`页面 ${page.name} 已${action}成功`);
+      
+      // 显示成功提示
+      const successMessage = currentStatus 
+        ? `媒体页 "${page.name}" 已暂停，用户将无法访问`
+        : `媒体页 "${page.name}" 已继续，用户可以正常访问`;
+      
+      // 创建临时提示元素
+      const toast = document.createElement('div');
+      toast.className = `fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg text-white font-medium transition-all duration-300 ${
+        currentStatus ? 'bg-orange-500' : 'bg-green-500'
+      }`;
+      toast.textContent = successMessage;
+      document.body.appendChild(toast);
+      
+      // 3秒后移除提示
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => document.body.removeChild(toast), 300);
+      }, 3000);
+
+    } catch (error) {
+      console.error(`${action}页面失败:`, error);
+      alert(`${action}页面失败，请重试`);
+    } finally {
+      // 移除处理状态
+      setProcessingPages(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(pageId);
+        return newSet;
+      });
     }
   };
 
@@ -280,17 +339,17 @@ const MediaPagesList: React.FC<MediaPagesListProps> = ({ admin }) => {
           </div>
           <div className="bg-green-50 border border-green-200 rounded-lg p-4">
             <div className="flex items-center space-x-2">
-              <Check className="h-5 w-5 text-green-600" />
+              <Play className="h-5 w-5 text-green-600" />
               <span className="text-sm font-medium text-green-800">活跃页面</span>
             </div>
             <p className="text-2xl font-bold text-green-900 mt-1">{pages.filter(p => p.isActive).length}</p>
           </div>
           <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
             <div className="flex items-center space-x-2">
-              <Users className="h-5 w-5 text-orange-600" />
-              <span className="text-sm font-medium text-orange-800">显示结果</span>
+              <Pause className="h-5 w-5 text-orange-600" />
+              <span className="text-sm font-medium text-orange-800">已暂停</span>
             </div>
-            <p className="text-2xl font-bold text-orange-900 mt-1">{filteredPages.length}</p>
+            <p className="text-2xl font-bold text-orange-900 mt-1">{pages.filter(p => !p.isActive).length}</p>
           </div>
           <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
             <div className="flex items-center space-x-2">
@@ -354,11 +413,33 @@ const MediaPagesList: React.FC<MediaPagesListProps> = ({ admin }) => {
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                         page.isActive 
                           ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'
+                          : 'bg-orange-100 text-orange-800'
                       }`}>
-                        {page.isActive ? '活跃' : '已停用'}
+                        {page.isActive ? '活跃' : '已暂停'}
                       </span>
                       <div className="flex space-x-1">
+                        {/* 暂停/继续按钮 */}
+                        <button
+                          onClick={() => handleTogglePageStatus(page.id, page.isActive)}
+                          disabled={processingPages.has(page.id)}
+                          className={`p-2 rounded-lg transition-all duration-200 ${
+                            processingPages.has(page.id)
+                              ? 'text-gray-400 cursor-not-allowed'
+                              : page.isActive
+                                ? 'text-orange-600 hover:text-orange-700 hover:bg-orange-50'
+                                : 'text-green-600 hover:text-green-700 hover:bg-green-50'
+                          }`}
+                          title={processingPages.has(page.id) ? '处理中...' : page.isActive ? '暂停页面' : '继续页面'}
+                        >
+                          {processingPages.has(page.id) ? (
+                            <div className="h-4 w-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+                          ) : page.isActive ? (
+                            <Pause className="h-4 w-4" />
+                          ) : (
+                            <Play className="h-4 w-4" />
+                          )}
+                        </button>
+                        
                         <button
                           onClick={() => handleEditPage(page)}
                           className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200"
@@ -368,8 +449,13 @@ const MediaPagesList: React.FC<MediaPagesListProps> = ({ admin }) => {
                         </button>
                         <button
                           onClick={() => handleOpenLink(page.uniqueLink)}
-                          className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all duration-200"
-                          title="访问页面"
+                          disabled={!page.isActive}
+                          className={`p-2 rounded-lg transition-all duration-200 ${
+                            page.isActive
+                              ? 'text-gray-400 hover:text-green-600 hover:bg-green-50'
+                              : 'text-gray-300 cursor-not-allowed'
+                          }`}
+                          title={page.isActive ? "访问页面" : "页面已暂停，无法访问"}
                         >
                           <ExternalLink className="h-4 w-4" />
                         </button>
@@ -451,10 +537,15 @@ const MediaPagesList: React.FC<MediaPagesListProps> = ({ admin }) => {
                         
                         <button
                           onClick={() => handleOpenLink(page.uniqueLink)}
-                          className="text-xs text-blue-600 hover:text-blue-800 font-medium px-2 py-1 hover:bg-blue-50 rounded transition-all duration-200"
-                          title="点击访问页面"
+                          disabled={!page.isActive}
+                          className={`text-xs font-medium px-2 py-1 rounded transition-all duration-200 ${
+                            page.isActive
+                              ? 'text-blue-600 hover:text-blue-800 hover:bg-blue-50'
+                              : 'text-gray-400 cursor-not-allowed'
+                          }`}
+                          title={page.isActive ? "点击访问页面" : "页面已暂停，无法访问"}
                         >
-                          访问页面
+                          {page.isActive ? '访问页面' : '已暂停'}
                         </button>
                       </div>
                     </div>
@@ -467,6 +558,18 @@ const MediaPagesList: React.FC<MediaPagesListProps> = ({ admin }) => {
                     </p>
                   </div>
 
+                  {/* 页面状态提示 */}
+                  {!page.isActive && (
+                    <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                      <div className="flex items-center space-x-2">
+                        <Pause className="h-4 w-4 text-orange-600" />
+                        <p className="text-sm text-orange-800">
+                          <strong>页面已暂停：</strong>用户无法访问此页面，所有功能已停用
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Usage Bar */}
                   <div className="mt-4">
                     <div className="flex justify-between text-xs text-gray-600 mb-1">
@@ -475,7 +578,11 @@ const MediaPagesList: React.FC<MediaPagesListProps> = ({ admin }) => {
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div
-                        className="bg-gradient-to-r from-blue-500 to-purple-600 h-2 rounded-full transition-all duration-300"
+                        className={`h-2 rounded-full transition-all duration-300 ${
+                          page.isActive 
+                            ? 'bg-gradient-to-r from-blue-500 to-purple-600' 
+                            : 'bg-gradient-to-r from-gray-400 to-gray-500'
+                        }`}
                         style={{
                           width: `${Math.min((page.dbUsage / page.dbSizeLimit) * 100, 100)}%`
                         }}
@@ -486,7 +593,11 @@ const MediaPagesList: React.FC<MediaPagesListProps> = ({ admin }) => {
                   {/* 移动端友好提示 */}
                   <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg md:hidden">
                     <p className="text-xs text-blue-800">
-                      <strong>移动端提示：</strong>点击"访问页面"将在当前标签页打开链接。您也可以使用"复制链接"功能将链接分享给他人。
+                      <strong>移动端提示：</strong>
+                      {page.isActive 
+                        ? '点击"访问页面"将在当前标签页打开链接。您也可以使用"复制链接"功能将链接分享给他人。'
+                        : '页面已暂停，用户无法访问。点击播放按钮可以继续页面。'
+                      }
                     </p>
                   </div>
                 </div>
