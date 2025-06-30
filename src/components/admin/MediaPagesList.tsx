@@ -48,7 +48,7 @@ const MediaPagesList: React.FC<MediaPagesListProps> = ({ admin }) => {
 
   const [showEditor, setShowEditor] = useState(false);
   const [editingPage, setEditingPage] = useState<MediaPage | null>(null);
-  const [copiedLinks, setCopiedLinks] = useState<Set<string>>(new Set());
+  const [copiedItems, setCopiedItems] = useState<Set<string>>(new Set()); // 改为通用的复制状态
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
   const [processingPages, setProcessingPages] = useState<Set<string>>(new Set());
@@ -217,14 +217,15 @@ const MediaPagesList: React.FC<MediaPagesListProps> = ({ admin }) => {
     }
   };
 
-  const handleCopyLink = async (url: string, pageId: string) => {
+  // 通用复制功能
+  const handleCopyText = async (text: string, itemId: string, itemType: string) => {
     try {
       if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(url);
+        await navigator.clipboard.writeText(text);
       } else {
         // 回退方案：创建临时文本区域
         const textArea = document.createElement('textarea');
-        textArea.value = url;
+        textArea.value = text;
         textArea.style.position = 'fixed';
         textArea.style.left = '-999999px';
         textArea.style.top = '-999999px';
@@ -235,18 +236,19 @@ const MediaPagesList: React.FC<MediaPagesListProps> = ({ admin }) => {
         textArea.remove();
       }
       
-      setCopiedLinks(prev => new Set([...prev, pageId]));
+      const copyKey = `${itemId}_${itemType}`;
+      setCopiedItems(prev => new Set([...prev, copyKey]));
       setTimeout(() => {
-        setCopiedLinks(prev => {
+        setCopiedItems(prev => {
           const newSet = new Set(prev);
-          newSet.delete(pageId);
+          newSet.delete(copyKey);
           return newSet;
         });
       }, 2000);
-      console.log('链接复制成功:', url);
+      console.log(`${itemType}复制成功:`, text);
     } catch (error) {
-      console.error('复制链接失败:', error);
-      alert('复制失败，请手动复制链接');
+      console.error(`复制${itemType}失败:`, error);
+      alert(`复制失败，请手动复制${itemType}`);
     }
   };
 
@@ -407,7 +409,29 @@ const MediaPagesList: React.FC<MediaPagesListProps> = ({ admin }) => {
                         </span>
                       </div>
                       <p className="text-sm text-gray-500">内部编码: {page.internalCode}</p>
-                      <p className="text-xs text-gray-400 mt-1">页面ID: {page.id}</p>
+                      
+                      {/* 页面ID显示和复制 */}
+                      <div className="flex items-center space-x-2 mt-1">
+                        <span className="text-xs text-gray-400">页面ID:</span>
+                        <code className="text-xs bg-gray-100 px-2 py-1 rounded font-mono text-gray-700">
+                          {page.id}
+                        </code>
+                        <button
+                          onClick={() => handleCopyText(page.id, page.id, 'pageId')}
+                          className={`p-1 rounded transition-all duration-200 ${
+                            copiedItems.has(`${page.id}_pageId`)
+                              ? 'bg-green-100 text-green-600'
+                              : 'bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700'
+                          }`}
+                          title="复制页面ID"
+                        >
+                          {copiedItems.has(`${page.id}_pageId`) ? (
+                            <Check className="h-3 w-3" />
+                          ) : (
+                            <Copy className="h-3 w-3" />
+                          )}
+                        </button>
+                      </div>
                     </div>
                     <div className="flex items-center space-x-2">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -511,51 +535,73 @@ const MediaPagesList: React.FC<MediaPagesListProps> = ({ admin }) => {
                         <span>二维码</span>
                       </button>
                       
-                      {/* 链接显示和操作区域 */}
-                      <div className="flex items-center space-x-2">
-                        <button
-                          onClick={() => handleCopyLink(page.uniqueLink, page.id)}
-                          className={`flex items-center space-x-1 px-3 py-1 text-xs rounded-md transition-all duration-200 ${
-                            copiedLinks.has(page.id)
-                              ? 'bg-green-100 text-green-700'
-                              : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                          }`}
-                          title="复制链接"
-                        >
-                          {copiedLinks.has(page.id) ? (
-                            <>
-                              <Check className="h-3 w-3" />
-                              <span>已复制</span>
-                            </>
-                          ) : (
-                            <>
-                              <Copy className="h-3 w-3" />
-                              <span>复制链接</span>
-                            </>
-                          )}
-                        </button>
-                        
-                        <button
-                          onClick={() => handleOpenLink(page.uniqueLink)}
-                          disabled={!page.isActive}
-                          className={`text-xs font-medium px-2 py-1 rounded transition-all duration-200 ${
-                            page.isActive
-                              ? 'text-blue-600 hover:text-blue-800 hover:bg-blue-50'
-                              : 'text-gray-400 cursor-not-allowed'
-                          }`}
-                          title={page.isActive ? "点击访问页面" : "页面已暂停，无法访问"}
-                        >
-                          {page.isActive ? '访问页面' : '已暂停'}
-                        </button>
-                      </div>
+                      {/* 链接复制按钮 */}
+                      <button
+                        onClick={() => handleCopyText(page.uniqueLink, page.id, 'link')}
+                        className={`flex items-center space-x-1 px-3 py-1 text-xs rounded-md transition-all duration-200 ${
+                          copiedItems.has(`${page.id}_link`)
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                        }`}
+                        title="复制访问链接"
+                      >
+                        {copiedItems.has(`${page.id}_link`) ? (
+                          <>
+                            <Check className="h-3 w-3" />
+                            <span>已复制链接</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-3 w-3" />
+                            <span>复制链接</span>
+                          </>
+                        )}
+                      </button>
+                      
+                      <button
+                        onClick={() => handleOpenLink(page.uniqueLink)}
+                        disabled={!page.isActive}
+                        className={`text-xs font-medium px-2 py-1 rounded transition-all duration-200 ${
+                          page.isActive
+                            ? 'text-blue-600 hover:text-blue-800 hover:bg-blue-50'
+                            : 'text-gray-400 cursor-not-allowed'
+                        }`}
+                        title={page.isActive ? "点击访问页面" : "页面已暂停，无法访问"}
+                      >
+                        {page.isActive ? '访问页面' : '已暂停'}
+                      </button>
                     </div>
                   </div>
 
-                  {/* 显示完整链接 */}
-                  <div className="mt-3 p-2 bg-gray-50 rounded-lg">
-                    <p className="text-xs text-gray-600 break-all">
-                      <strong>访问链接:</strong> {page.uniqueLink}
-                    </p>
+                  {/* 显示完整链接和复制功能 */}
+                  <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-gray-600 mb-1">
+                          <strong>访问链接:</strong>
+                        </p>
+                        <div className="flex items-center space-x-2">
+                          <code className="text-xs text-gray-800 bg-white px-2 py-1 rounded border break-all flex-1">
+                            {page.uniqueLink}
+                          </code>
+                          <button
+                            onClick={() => handleCopyText(page.uniqueLink, page.id, 'fullLink')}
+                            className={`flex-shrink-0 p-1.5 rounded transition-all duration-200 ${
+                              copiedItems.has(`${page.id}_fullLink`)
+                                ? 'bg-green-100 text-green-600'
+                                : 'bg-white text-gray-500 hover:bg-gray-100 hover:text-gray-700 border'
+                            }`}
+                            title="复制完整链接"
+                          >
+                            {copiedItems.has(`${page.id}_fullLink`) ? (
+                              <Check className="h-3 w-3" />
+                            ) : (
+                              <Copy className="h-3 w-3" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   {/* 页面状态提示 */}
@@ -595,7 +641,7 @@ const MediaPagesList: React.FC<MediaPagesListProps> = ({ admin }) => {
                     <p className="text-xs text-blue-800">
                       <strong>移动端提示：</strong>
                       {page.isActive 
-                        ? '点击"访问页面"将在当前标签页打开链接。您也可以使用"复制链接"功能将链接分享给他人。'
+                        ? '点击"访问页面"将在当前标签页打开链接。您也可以使用复制按钮将页面ID或链接分享给他人。'
                         : '页面已暂停，用户无法访问。点击播放按钮可以继续页面。'
                       }
                     </p>
