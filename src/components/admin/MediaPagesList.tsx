@@ -408,7 +408,29 @@ const MediaPagesList: React.FC<MediaPagesListProps> = ({ admin }) => {
                           #{index + 1}
                         </span>
                       </div>
-                      <p className="text-sm text-gray-500">内部编码: {page.internalCode}</p>
+                      
+                      {/* 内部编码显示和复制 */}
+                      <div className="flex items-center space-x-2 mb-1">
+                        <span className="text-sm text-gray-500">内部编码:</span>
+                        <code className="text-sm bg-gray-100 px-2 py-1 rounded font-mono text-gray-700">
+                          {page.internalCode}
+                        </code>
+                        <button
+                          onClick={() => handleCopyText(page.internalCode, page.id, 'internalCode')}
+                          className={`p-1 rounded transition-all duration-200 ${
+                            copiedItems.has(`${page.id}_internalCode`)
+                              ? 'bg-green-100 text-green-600'
+                              : 'bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700'
+                          }`}
+                          title="复制内部编码"
+                        >
+                          {copiedItems.has(`${page.id}_internalCode`) ? (
+                            <Check className="h-3 w-3" />
+                          ) : (
+                            <Copy className="h-3 w-3" />
+                          )}
+                        </button>
+                      </div>
                       
                       {/* 页面ID显示和复制 */}
                       <div className="flex items-center space-x-2 mt-1">
@@ -641,7 +663,7 @@ const MediaPagesList: React.FC<MediaPagesListProps> = ({ admin }) => {
                     <p className="text-xs text-blue-800">
                       <strong>移动端提示：</strong>
                       {page.isActive 
-                        ? '点击"访问页面"将在当前标签页打开链接。您也可以使用复制按钮将页面ID或链接分享给他人。'
+                        ? '点击"访问页面"将在当前标签页打开链接。您也可以使用复制按钮将页面ID、内部编码或链接分享给他人。'
                         : '页面已暂停，用户无法访问。点击播放按钮可以继续页面。'
                       }
                     </p>
