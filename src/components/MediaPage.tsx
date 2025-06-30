@@ -28,21 +28,47 @@ const MediaPage: React.FC = () => {
   // 确定当前页面ID
   const currentPageId = pageId || 'page_demo';
 
-  console.log('MediaPage 渲染:', { pageId, currentPageId, storedPagesCount: storedPages.length });
+  console.log('MediaPage 渲染:', { 
+    pageId, 
+    currentPageId, 
+    storedPagesCount: storedPages.length,
+    storedPageIds: storedPages.map(p => p.id)
+  });
 
-  // 验证页面是否存在
+  // 验证页面是否存在 - 改进的查找逻辑
   useEffect(() => {
-    const foundPage = storedPages.find(page => 
-      page.id === currentPageId || 
-      page.internalCode === currentPageId ||
-      page.uniqueLink.includes(currentPageId)
-    );
+    console.log('开始验证页面:', currentPageId);
+    console.log('可用页面:', storedPages.map(p => ({ id: p.id, name: p.name, active: p.isActive })));
+
+    // 多种方式查找页面
+    let foundPage = storedPages.find(page => {
+      // 1. 精确匹配页面ID
+      if (page.id === currentPageId) return true;
+      
+      // 2. 匹配内部编码
+      if (page.internalCode === currentPageId) return true;
+      
+      // 3. 从链接中提取页面ID进行匹配
+      const linkPageId = page.uniqueLink.split('/page/')[1];
+      if (linkPageId === currentPageId) return true;
+      
+      // 4. 处理可能的URL编码问题
+      try {
+        const decodedPageId = decodeURIComponent(currentPageId);
+        if (page.id === decodedPageId || page.internalCode === decodedPageId) return true;
+      } catch (e) {
+        // 忽略解码错误
+      }
+      
+      return false;
+    });
 
     if (foundPage) {
+      console.log('✅ 找到页面:', foundPage.name, '状态:', foundPage.isActive ? '活跃' : '已暂停');
       setPageData(foundPage);
       setPageNotFound(false);
-      console.log('找到页面:', foundPage.name);
     } else if (currentPageId === 'page_demo') {
+      console.log('🎯 使用默认演示页面');
       // 默认演示页面
       const demoPage: MediaPageType = {
         id: 'page_demo',
@@ -54,7 +80,7 @@ const MediaPage: React.FC = () => {
         discountRecords: [],
         purchaserGender: 'male',
         usageScenario: '婚礼纪念',
-        uniqueLink: 'https://media.example.com/page/demo',
+        uniqueLink: `${window.location.origin}/page/page_demo`,
         qrCode: '',
         internalCode: 'DEMO001',
         productDetails: {
@@ -72,8 +98,10 @@ const MediaPage: React.FC = () => {
       setPageData(demoPage);
       setPageNotFound(false);
     } else {
+      console.log('❌ 页面未找到:', currentPageId);
+      console.log('尝试查找的页面ID:', currentPageId);
+      console.log('可用的页面ID列表:', storedPages.map(p => p.id));
       setPageNotFound(true);
-      console.log('页面未找到:', currentPageId);
     }
   }, [currentPageId, storedPages]);
 
@@ -143,6 +171,15 @@ const MediaPage: React.FC = () => {
               <p className="text-xs text-blue-600 mt-1">
                 如果您认为这是一个错误，请联系管理员
               </p>
+              <div className="mt-2 text-xs text-blue-600">
+                <strong>调试信息:</strong>
+                <br />
+                URL参数: {pageId || '无'}
+                <br />
+                当前页面ID: {currentPageId}
+                <br />
+                可用页面数: {storedPages.length}
+              </div>
             </div>
           </div>
         </div>
