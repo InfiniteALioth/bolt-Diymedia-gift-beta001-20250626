@@ -11,9 +11,11 @@ class MediaStorageDB {
   private dbName: string;
   private version = 1;
   private db: IDBDatabase | null = null;
+  private pageId: string;
 
   constructor(pageId: string) {
-    this.dbName = `mediaPage_${pageId}`;
+    this.pageId = pageId;
+    this.dbName = `mediaPage_${pageId}`; // 每个页面使用独立的数据库
   }
 
   async init(): Promise<void> {
@@ -81,9 +83,11 @@ class MediaStorageDB {
       request.onerror = () => reject(request.error);
       request.onsuccess = () => {
         const items = request.result || [];
+        // 只返回属于当前页面的媒体项
+        const pageItems = items.filter(item => item.pageId === this.pageId);
         // Sort by creation date, newest first
-        items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        resolve(items);
+        pageItems.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        resolve(pageItems);
       };
     });
   }
@@ -131,9 +135,14 @@ class MediaStorageDB {
       transaction.onerror = () => reject(transaction.error);
       transaction.oncomplete = () => resolve();
 
-      // Clear existing messages and add new ones
-      store.clear();
-      messages.forEach(message => store.add(message));
+      // 只保存属于当前页面的消息
+      const pageMessages = messages.filter(msg => msg.pageId === this.pageId);
+      
+      // Clear existing messages for this page and add new ones
+      const clearRequest = store.clear();
+      clearRequest.onsuccess = () => {
+        pageMessages.forEach(message => store.add(message));
+      };
     });
   }
 
@@ -148,9 +157,11 @@ class MediaStorageDB {
       request.onerror = () => reject(request.error);
       request.onsuccess = () => {
         const messages = request.result || [];
+        // 只返回属于当前页面的消息
+        const pageMessages = messages.filter(msg => msg.pageId === this.pageId);
         // Sort by creation date
-        messages.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-        resolve(messages);
+        pageMessages.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+        resolve(pageMessages);
       };
     });
   }
@@ -187,7 +198,7 @@ const createMediaItemFromFile = async (
     else throw new Error('Unsupported file type');
 
     const mediaItem: MediaItem = {
-      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: `${pageId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // 包含页面ID的唯一标识
       type,
       url: '', // Will be generated from blob when needed
       thumbnail: type === 'image' ? '' : undefined, // Will be generated from blob when needed
@@ -195,7 +206,7 @@ const createMediaItemFromFile = async (
       uploaderName,
       caption,
       createdAt: new Date().toISOString(),
-      pageId
+      pageId // 确保媒体项关联到正确的页面
     };
 
     return { mediaItem, blob: file };
@@ -212,21 +223,29 @@ export function useMediaStorage(pageId: string) {
   const [db, setDb] = useState<MediaStorageDB | null>(null);
   const [blobUrls, setBlobUrls] = useState<Map<string, string>>(new Map());
 
-  // Initialize IndexedDB
+  console.log('useMediaStorage 初始化，页面ID:', pageId);
+
+  // Initialize IndexedDB - 每个页面使用独立的数据库实例
   useEffect(() => {
     const initDB = async () => {
       try {
+        console.log('初始化页面数据库:', pageId);
+        
+        // 清理之前的blob URLs
+        blobUrls.forEach(url => URL.revokeObjectURL(url));
+        setBlobUrls(new Map());
+        
         const database = new MediaStorageDB(pageId);
         await database.init();
         setDb(database);
 
-        // Load existing data
+        // Load existing data for this specific page
         const [items, messages] = await Promise.all([
           database.getMediaItems(),
           database.getChatMessages()
         ]);
 
-        console.log('从 IndexedDB 加载数据:', { items: items.length, messages: messages.length });
+        console.log(`从页面 ${pageId} 加载数据:`, { items: items.length, messages: messages.length });
         
         // Create blob URLs for media items
         const urlMap = new Map<string, string>();
@@ -251,7 +270,7 @@ export function useMediaStorage(pageId: string) {
         setMediaItems(items);
         setChatMessages(messages);
       } catch (error) {
-        console.error('初始化 IndexedDB 失败:', error);
+        console.error('初始化页面数据库失败:', pageId, error);
         // Fallback to empty state
         setMediaItems([]);
         setChatMessages([]);
@@ -260,13 +279,18 @@ export function useMediaStorage(pageId: string) {
       }
     };
 
+    // 重置状态
+    setIsLoaded(false);
+    setMediaItems([]);
+    setChatMessages([]);
+    
     initDB();
 
-    // Cleanup blob URLs on unmount
+    // Cleanup blob URLs on unmount or page change
     return () => {
       blobUrls.forEach(url => URL.revokeObjectURL(url));
     };
-  }, [pageId]);
+  }, [pageId]); // 依赖于pageId，页面变化时重新初始化
 
   // 添加媒体项 - 接受 File 数组并存储到 IndexedDB
   const addMediaItems = useCallback(async (
@@ -274,7 +298,7 @@ export function useMediaStorage(pageId: string) {
     uploaderName: string, 
     caption: string, 
     uploaderId: string, 
-    pageId: string
+    targetPageId: string
   ) => {
     if (!db) {
       console.error('Database not initialized');
@@ -282,14 +306,17 @@ export function useMediaStorage(pageId: string) {
       return;
     }
 
+    // 确保使用正确的页面ID
+    const actualPageId = targetPageId || pageId;
+    console.log('添加媒体到页面:', actualPageId, '文件数量:', files.length);
+
     try {
-      console.log('开始处理文件:', files.length);
       const newItems: MediaItem[] = [];
       const newBlobUrls = new Map(blobUrls);
       
       for (const file of files) {
         try {
-          const { mediaItem, blob } = await createMediaItemFromFile(file, uploaderName, caption, uploaderId, pageId);
+          const { mediaItem, blob } = await createMediaItemFromFile(file, uploaderName, caption, uploaderId, actualPageId);
           
           // Save to IndexedDB
           await db.saveMediaItem(mediaItem, blob);
@@ -305,7 +332,7 @@ export function useMediaStorage(pageId: string) {
           }
           
           newItems.push(mediaItem);
-          console.log('文件处理完成:', file.name, '-> 存储到 IndexedDB');
+          console.log('文件处理完成:', file.name, '-> 存储到页面', actualPageId);
         } catch (error) {
           console.error('处理文件失败:', file.name, error);
           alert(`处理文件 "${file.name}" 失败，请重试`);
@@ -315,13 +342,13 @@ export function useMediaStorage(pageId: string) {
       if (newItems.length > 0) {
         setBlobUrls(newBlobUrls);
         setMediaItems(prev => [...newItems, ...prev]); // Add new items at the beginning
-        console.log('成功添加', newItems.length, '个媒体项');
+        console.log(`成功添加 ${newItems.length} 个媒体项到页面 ${actualPageId}`);
       }
     } catch (error) {
       console.error('添加媒体项失败:', error);
       alert('添加媒体失败，请重试');
     }
-  }, [db, blobUrls]);
+  }, [db, blobUrls, pageId]);
 
   // 删除媒体项
   const removeMediaItem = useCallback(async (itemId: string) => {
@@ -340,26 +367,29 @@ export function useMediaStorage(pageId: string) {
       }
       
       setMediaItems(prev => prev.filter(item => item.id !== itemId));
-      console.log('删除媒体项:', itemId);
+      console.log('删除媒体项:', itemId, '从页面:', pageId);
     } catch (error) {
       console.error('删除媒体项失败:', error);
       alert('删除失败，请重试');
     }
-  }, [db, blobUrls]);
+  }, [db, blobUrls, pageId]);
 
   // 添加聊天消息
   const addChatMessage = useCallback(async (message: ChatMessage) => {
     if (!db) return;
 
     try {
-      const updatedMessages = [...chatMessages, message];
+      // 确保消息关联到正确的页面
+      const messageWithPageId = { ...message, pageId };
+      const updatedMessages = [...chatMessages, messageWithPageId];
       await db.saveChatMessages(updatedMessages);
       setChatMessages(updatedMessages);
+      console.log('添加消息到页面:', pageId, '消息内容:', message.content);
     } catch (error) {
       console.error('保存聊天消息失败:', error);
       alert('发送消息失败，请重试');
     }
-  }, [db, chatMessages]);
+  }, [db, chatMessages, pageId]);
 
   // 清空所有数据
   const clearAllData = useCallback(async () => {
@@ -374,12 +404,12 @@ export function useMediaStorage(pageId: string) {
       
       setMediaItems([]);
       setChatMessages([]);
-      console.log('已清空所有数据');
+      console.log('已清空页面数据:', pageId);
     } catch (error) {
       console.error('清空数据失败:', error);
       alert('清空数据失败，请重试');
     }
-  }, [db, blobUrls]);
+  }, [db, blobUrls, pageId]);
 
   return {
     mediaItems,
