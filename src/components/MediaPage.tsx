@@ -274,21 +274,9 @@ const MediaPage: React.FC = () => {
 
   return (
     <div className="w-full h-screen bg-black overflow-hidden relative">
-      {/* Header */}
+      {/* Header - 移除了页面信息显示，只保留用户信息按钮 */}
       <div className="absolute top-0 left-0 right-0 z-40 bg-gradient-to-b from-black/50 to-transparent">
-        <div className="flex items-center justify-between p-4">
-          {/* 左侧页面信息 */}
-          <div className="flex items-center space-x-3">
-            <div className="bg-white bg-opacity-20 backdrop-blur-sm rounded-lg px-3 py-1">
-              <span className="text-white text-sm font-medium">{pageData.name}</span>
-            </div>
-            {pageData.usageScenario && (
-              <div className="bg-blue-500 bg-opacity-20 backdrop-blur-sm rounded-lg px-2 py-1">
-                <span className="text-blue-200 text-xs">{pageData.usageScenario}</span>
-              </div>
-            )}
-          </div>
-
+        <div className="flex items-center justify-end p-4">
           {/* 右侧用户信息按钮 */}
           <button
             onClick={() => setShowUserInfo(true)}
