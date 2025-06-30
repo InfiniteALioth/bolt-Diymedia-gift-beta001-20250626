@@ -277,13 +277,52 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
         )}
       </div>
 
-      {/* Media Info Overlay */}
-      <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/60 to-transparent p-6 pt-20">
-        <div className="text-center text-white px-4">
-          <p className="text-lg font-medium">
-            {currentMedia.caption && `"${currentMedia.caption}" - `}
-            由 {currentMedia.uploaderName} 上传
-          </p>
+      {/* Media Info Overlay - 完整显示说明文字并支持自动换行 */}
+      <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/70 via-black/40 to-transparent p-6 pt-20">
+        <div className="max-w-4xl mx-auto px-4">
+          {/* 上传者信息 */}
+          <div className="text-center mb-4">
+            <p className="text-white/90 text-lg font-medium">
+              由 <span className="text-blue-300 font-semibold">{currentMedia.uploaderName}</span> 上传
+            </p>
+            <p className="text-white/60 text-sm mt-1">
+              {new Date(currentMedia.createdAt).toLocaleString()}
+            </p>
+          </div>
+
+          {/* 完整显示说明文字 - 支持自动换行 */}
+          {currentMedia.caption && currentMedia.caption.trim() && (
+            <div className="bg-black/30 backdrop-blur-sm rounded-2xl p-6 border border-white/10">
+              <div className="text-center">
+                <h3 className="text-white/80 text-sm font-medium mb-3 uppercase tracking-wider">
+                  想说的话
+                </h3>
+                <div 
+                  className="text-white text-lg leading-relaxed"
+                  style={{
+                    wordWrap: 'break-word',
+                    overflowWrap: 'break-word',
+                    hyphens: 'auto',
+                    whiteSpace: 'pre-wrap', // 保留换行符和空格
+                    lineHeight: '1.6'
+                  }}
+                >
+                  {currentMedia.caption}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 如果没有说明文字，显示默认提示 */}
+          {(!currentMedia.caption || !currentMedia.caption.trim()) && (
+            <div className="bg-black/20 backdrop-blur-sm rounded-2xl p-4 border border-white/5">
+              <div className="text-center">
+                <p className="text-white/50 text-sm italic">
+                  上传者没有留下任何话语...
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
