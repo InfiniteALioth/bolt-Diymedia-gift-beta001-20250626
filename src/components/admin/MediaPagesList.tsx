@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { MediaPage, Admin } from '../../types';
-import { Plus, ExternalLink, QrCode, Settings, Trash2, Calendar, Database, Users, Copy, Check, Search, Filter, Pause, Play } from 'lucide-react';
+import { Plus, ExternalLink, QrCode, Settings, Trash2, Calendar, Database, Users, Copy, Check, Search, Filter, Pause, Play, Eye, FileImage } from 'lucide-react';
 import MediaPageEditor from './MediaPageEditor';
 import QRCodeModal from '../QRCodeModal';
+import PageUsersModal from './PageUsersModal';
+import PageMediaModal from './PageMediaModal';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
 
 interface MediaPagesListProps {
@@ -57,6 +59,14 @@ const MediaPagesList: React.FC<MediaPagesListProps> = ({ admin }) => {
   // 二维码模态框状态
   const [showQRCode, setShowQRCode] = useState(false);
   const [qrCodeData, setQrCodeData] = useState<{ url: string; title: string } | null>(null);
+
+  // 用户管理模态框状态
+  const [showUsersModal, setShowUsersModal] = useState(false);
+  const [usersModalPage, setUsersModalPage] = useState<MediaPage | null>(null);
+
+  // 媒体管理模态框状态
+  const [showMediaModal, setShowMediaModal] = useState(false);
+  const [mediaModalPage, setMediaModalPage] = useState<MediaPage | null>(null);
 
   // 生成唯一的内部编码
   const generateInternalCode = () => {
@@ -238,6 +248,18 @@ const MediaPagesList: React.FC<MediaPagesListProps> = ({ admin }) => {
       title: page.name
     });
     setShowQRCode(true);
+  };
+
+  // 显示用户管理模态框
+  const handleShowUsers = (page: MediaPage) => {
+    setUsersModalPage(page);
+    setShowUsersModal(true);
+  };
+
+  // 显示媒体管理模态框
+  const handleShowMedia = (page: MediaPage) => {
+    setMediaModalPage(page);
+    setShowMediaModal(true);
   };
 
   // 通用复制功能
@@ -574,6 +596,24 @@ const MediaPagesList: React.FC<MediaPagesListProps> = ({ admin }) => {
                     </div>
                     
                     <div className="flex items-center space-x-2">
+                      {/* 查看用户按钮 */}
+                      <button 
+                        onClick={() => handleShowUsers(page)}
+                        className="flex items-center space-x-1 px-3 py-1 text-xs bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-700 hover:from-blue-200 hover:to-cyan-200 rounded-md transition-all duration-200 border border-blue-200 hover:border-blue-300 shadow-sm hover:shadow-md"
+                      >
+                        <Users className="h-3 w-3" />
+                        <span>查看用户</span>
+                      </button>
+
+                      {/* 管理媒体按钮 */}
+                      <button 
+                        onClick={() => handleShowMedia(page)}
+                        className="flex items-center space-x-1 px-3 py-1 text-xs bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 hover:from-purple-200 hover:to-pink-200 rounded-md transition-all duration-200 border border-purple-200 hover:border-purple-300 shadow-sm hover:shadow-md"
+                      >
+                        <FileImage className="h-3 w-3" />
+                        <span>管理媒体</span>
+                      </button>
+                      
                       {/* 二维码按钮 - 增强样式 */}
                       <button 
                         onClick={() => handleShowQRCode(page)}
@@ -727,6 +767,28 @@ const MediaPagesList: React.FC<MediaPagesListProps> = ({ admin }) => {
           onClose={() => {
             setShowQRCode(false);
             setQrCodeData(null);
+          }}
+        />
+      )}
+
+      {/* 用户管理模态框 */}
+      {showUsersModal && usersModalPage && (
+        <PageUsersModal
+          page={usersModalPage}
+          onClose={() => {
+            setShowUsersModal(false);
+            setUsersModalPage(null);
+          }}
+        />
+      )}
+
+      {/* 媒体管理模态框 */}
+      {showMediaModal && mediaModalPage && (
+        <PageMediaModal
+          page={mediaModalPage}
+          onClose={() => {
+            setShowMediaModal(false);
+            setMediaModalPage(null);
           }}
         />
       )}
