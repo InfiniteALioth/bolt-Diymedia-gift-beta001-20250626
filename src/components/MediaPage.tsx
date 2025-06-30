@@ -6,13 +6,15 @@ import MediaDisplay from './MediaDisplay';
 import ChatPanel from './ChatPanel';
 import MediaUpload from './MediaUpload';
 import UserSetup from './UserSetup';
-import { User } from 'lucide-react';
+import UserInfoModal from './UserInfoModal';
+import { User, ChevronDown } from 'lucide-react';
 
 const MediaPage: React.FC = () => {
   const { user, createUser, updateUsername } = useAuth();
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
   const [showUpload, setShowUpload] = useState(false);
   const [showUserEdit, setShowUserEdit] = useState(false);
+  const [showUserInfo, setShowUserInfo] = useState(false);
   const [autoPlay, setAutoPlay] = useState(true);
 
   // Mock page ID - in real app this would come from URL params
@@ -28,6 +30,20 @@ const MediaPage: React.FC = () => {
     addChatMessage,
     clearAllData
   } = useMediaStorage(pageId);
+
+  // 模拟剩余时间和存储数据
+  const [remainingTime, setRemainingTime] = useState(1440); // 24小时 = 1440分钟
+  const totalStorage = 1024; // 1GB = 1024MB
+  const usedStorage = Math.min(mediaItems.length * 50, totalStorage); // 假设每个媒体项50MB
+
+  // 模拟时间倒计时
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setRemainingTime(prev => Math.max(0, prev - 1));
+    }, 60000); // 每分钟减1
+
+    return () => clearInterval(timer);
+  }, []);
 
   // Handle first-time user setup
   if (!user) {
@@ -79,7 +95,7 @@ const MediaPage: React.FC = () => {
 
   const handleUsernameUpdate = (newUsername: string) => {
     updateUsername(newUsername);
-    setShowUserEdit(false);
+    setShowUserInfo(false);
   };
 
   const handleDeleteCurrentMedia = () => {
@@ -119,13 +135,18 @@ const MediaPage: React.FC = () => {
       {/* Header */}
       <div className="absolute top-0 left-0 right-0 z-40 bg-gradient-to-b from-black/50 to-transparent">
         <div className="flex items-center justify-end p-4">
-          {/* 右侧用户按钮 */}
+          {/* 右侧用户信息按钮 */}
           <button
-            onClick={() => setShowUserEdit(true)}
-            className="flex items-center space-x-2 px-3 py-2 bg-white bg-opacity-20 backdrop-blur-sm rounded-full text-white hover:bg-opacity-30 transition-all duration-200"
+            onClick={() => setShowUserInfo(true)}
+            className="flex items-center space-x-2 px-4 py-2 bg-white bg-opacity-20 backdrop-blur-sm rounded-full text-white hover:bg-opacity-30 transition-all duration-200 group"
           >
-            <User className="h-4 w-4" />
+            <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+              <span className="text-white text-sm font-bold">
+                {user.username.charAt(0).toUpperCase()}
+              </span>
+            </div>
             <span className="text-sm font-medium">{user.username}</span>
+            <ChevronDown className="h-4 w-4 transition-transform duration-200 group-hover:rotate-180" />
           </button>
         </div>
       </div>
@@ -164,6 +185,17 @@ const MediaPage: React.FC = () => {
           isEditing
           currentUsername={user.username}
           onComplete={handleUsernameUpdate}
+        />
+      )}
+
+      {showUserInfo && (
+        <UserInfoModal
+          user={user}
+          onClose={() => setShowUserInfo(false)}
+          onUpdateUsername={handleUsernameUpdate}
+          remainingTime={remainingTime}
+          usedStorage={usedStorage}
+          totalStorage={totalStorage}
         />
       )}
     </div>
