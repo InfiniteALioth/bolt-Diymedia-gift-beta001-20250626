@@ -19,6 +19,40 @@ class PageDataManager {
     return PageDataManager.instance;
   }
 
+  // 将文件转换为Base64字符串
+  private async fileToBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // 将Base64字符串转换为Blob URL
+  private base64ToBlobUrl(base64String: string): string {
+    try {
+      // 从data URL中提取MIME类型和数据
+      const [header, data] = base64String.split(',');
+      const mimeMatch = header.match(/data:([^;]+)/);
+      const mimeType = mimeMatch ? mimeMatch[1] : 'application/octet-stream';
+      
+      // 将Base64转换为二进制数据
+      const binaryString = atob(data);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      
+      // 创建Blob并生成URL
+      const blob = new Blob([bytes], { type: mimeType });
+      return URL.createObjectURL(blob);
+    } catch (error) {
+      console.error('Base64转换为Blob URL失败:', error);
+      return '';
+    }
+  }
+
   // 获取页面数据
   getPageData(pageId: string): MediaStorage {
     if (!this.pageDataMap.has(pageId)) {
@@ -43,16 +77,8 @@ class PageDataManager {
   savePageData(pageId: string, data: MediaStorage): void {
     this.pageDataMap.set(pageId, data);
     try {
-      // 保存到localStorage，但不包含blob URLs（因为它们不能序列化）
-      const dataToSave = {
-        mediaItems: data.mediaItems.map(item => ({
-          ...item,
-          url: '', // 清空URL，因为blob URL不能持久化
-          thumbnail: item.type === 'image' ? '' : item.thumbnail
-        })),
-        chatMessages: data.chatMessages
-      };
-      localStorage.setItem(`pageData_${pageId}`, JSON.stringify(dataToSave));
+      // 现在可以直接保存，因为URL已经是Base64字符串
+      localStorage.setItem(`pageData_${pageId}`, JSON.stringify(data));
     } catch (error) {
       console.error('保存页面数据失败:', error);
     }
@@ -64,6 +90,24 @@ class PageDataManager {
       const saved = localStorage.getItem(`pageData_${pageId}`);
       if (saved) {
         const data = JSON.parse(saved);
+        const blobUrls = this.getPageBlobUrls(pageId);
+        
+        // 将Base64 URLs转换回Blob URLs
+        data.mediaItems = data.mediaItems.map((item: MediaItem) => {
+          if (item.url && item.url.startsWith('data:')) {
+            // 这是一个Base64 URL，需要转换为Blob URL
+            const blobUrl = this.base64ToBlobUrl(item.url);
+            blobUrls.set(item.id, blobUrl);
+            
+            return {
+              ...item,
+              url: blobUrl,
+              thumbnail: item.type === 'image' ? blobUrl : item.thumbnail
+            };
+          }
+          return item;
+        });
+        
         this.pageDataMap.set(pageId, data);
         return data;
       }
@@ -101,23 +145,36 @@ class PageDataManager {
       pageId
     };
 
-    // 创建blob URL
-    const blobUrl = URL.createObjectURL(file);
-    blobUrls.set(mediaItem.id, blobUrl);
-    
-    // 设置URL
-    mediaItem.url = blobUrl;
-    if (mediaItem.type === 'image') {
-      mediaItem.thumbnail = blobUrl;
-    }
+    try {
+      // 将文件转换为Base64字符串用于持久化存储
+      const base64String = await this.fileToBase64(file);
+      
+      // 创建blob URL用于运行时显示
+      const blobUrl = URL.createObjectURL(file);
+      blobUrls.set(mediaItem.id, blobUrl);
+      
+      // 设置URL - 存储Base64用于持久化，但在运行时使用blob URL
+      mediaItem.url = base64String; // 存储Base64字符串
+      if (mediaItem.type === 'image') {
+        mediaItem.thumbnail = base64String;
+      }
 
-    // 添加到页面数据
-    pageData.mediaItems.unshift(mediaItem); // 添加到开头
-    
-    // 保存数据
-    this.savePageData(pageId, pageData);
-    
-    return mediaItem;
+      // 添加到页面数据
+      pageData.mediaItems.unshift(mediaItem); // 添加到开头
+      
+      // 保存数据（现在包含Base64数据）
+      this.savePageData(pageId, pageData);
+      
+      // 返回运行时版本（使用blob URL）
+      return {
+        ...mediaItem,
+        url: blobUrl,
+        thumbnail: mediaItem.type === 'image' ? blobUrl : mediaItem.thumbnail
+      };
+    } catch (error) {
+      console.error('处理文件失败:', error);
+      throw error;
+    }
   }
 
   // 删除媒体项
