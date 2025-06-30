@@ -287,12 +287,12 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
         </div>
       </div>
 
-      {/* Auto-play Toggle Button - 重新设计 */}
+      {/* Auto-play Toggle Button - 调整尺寸 */}
       <div className="absolute top-4 left-4 z-50">
         <button
           onClick={toggleAutoPlay}
           className={`
-            flex items-center space-x-2 px-4 py-2 rounded-full text-sm font-medium 
+            flex items-center space-x-2 px-3 py-1 rounded-full text-sm font-medium 
             transition-all duration-300 transform hover:scale-105 active:scale-95
             shadow-lg hover:shadow-xl backdrop-blur-sm
             ${autoPlay 
@@ -301,7 +301,7 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
             }
           `}
           style={{
-            minWidth: '120px',
+            minWidth: '90px',
             cursor: 'pointer'
           }}
         >

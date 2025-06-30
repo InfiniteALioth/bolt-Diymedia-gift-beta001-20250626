@@ -135,10 +135,10 @@ const MediaPage: React.FC = () => {
       {/* Header */}
       <div className="absolute top-0 left-0 right-0 z-40 bg-gradient-to-b from-black/50 to-transparent">
         <div className="flex items-center justify-end p-4">
-          {/* 右侧用户信息按钮 */}
+          {/* 右侧用户信息按钮 - 调整高度与自动播放按钮一致 */}
           <button
             onClick={() => setShowUserInfo(true)}
-            className="flex items-center space-x-2 px-4 py-2 bg-white bg-opacity-20 backdrop-blur-sm rounded-full text-white hover:bg-opacity-30 transition-all duration-200 group"
+            className="flex items-center space-x-2 px-4 py-1 bg-white bg-opacity-20 backdrop-blur-sm rounded-full text-white hover:bg-opacity-30 transition-all duration-200 group"
           >
             <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
               <span className="text-white text-sm font-bold">
