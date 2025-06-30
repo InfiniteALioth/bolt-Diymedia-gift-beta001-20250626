@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { MediaPage, Admin } from '../../types';
 import { Plus, ExternalLink, QrCode, Settings, Trash2, Calendar, Database, Users, Copy, Check, Search, Filter, Pause, Play } from 'lucide-react';
 import MediaPageEditor from './MediaPageEditor';
+import QRCodeModal from '../QRCodeModal';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
 
 interface MediaPagesListProps {
@@ -52,6 +53,10 @@ const MediaPagesList: React.FC<MediaPagesListProps> = ({ admin }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
   const [processingPages, setProcessingPages] = useState<Set<string>>(new Set());
+  
+  // 二维码模态框状态
+  const [showQRCode, setShowQRCode] = useState(false);
+  const [qrCodeData, setQrCodeData] = useState<{ url: string; title: string } | null>(null);
 
   // 生成唯一的内部编码
   const generateInternalCode = () => {
@@ -224,6 +229,15 @@ const MediaPagesList: React.FC<MediaPagesListProps> = ({ admin }) => {
       // 最后的回退方案
       window.location.href = url;
     }
+  };
+
+  // 显示二维码
+  const handleShowQRCode = (page: MediaPage) => {
+    setQrCodeData({
+      url: page.uniqueLink,
+      title: page.name
+    });
+    setShowQRCode(true);
   };
 
   // 通用复制功能
@@ -560,7 +574,11 @@ const MediaPagesList: React.FC<MediaPagesListProps> = ({ admin }) => {
                     </div>
                     
                     <div className="flex items-center space-x-2">
-                      <button className="flex items-center space-x-1 px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded-md transition-colors duration-200">
+                      {/* 二维码按钮 - 增强样式 */}
+                      <button 
+                        onClick={() => handleShowQRCode(page)}
+                        className="flex items-center space-x-1 px-3 py-1 text-xs bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-700 hover:from-indigo-200 hover:to-purple-200 rounded-md transition-all duration-200 border border-indigo-200 hover:border-indigo-300 shadow-sm hover:shadow-md"
+                      >
                         <QrCode className="h-3 w-3" />
                         <span>二维码</span>
                       </button>
@@ -671,7 +689,7 @@ const MediaPagesList: React.FC<MediaPagesListProps> = ({ admin }) => {
                     <p className="text-xs text-blue-800">
                       <strong>移动端提示：</strong>
                       {page.isActive 
-                        ? '点击"访问页面"将在当前标签页打开链接。您也可以使用复制按钮将页面ID、内部编码或链接分享给他人。'
+                        ? '点击"访问页面"将在当前标签页打开链接。您也可以使用复制按钮将页面ID、内部编码或链接分享给他人。点击"二维码"可生成扫码访问。'
                         : '页面已暂停，用户无法访问。点击播放按钮可以继续页面。'
                       }
                     </p>
@@ -692,11 +710,24 @@ const MediaPagesList: React.FC<MediaPagesListProps> = ({ admin }) => {
         </div>
       )}
 
+      {/* 编辑器模态框 */}
       {showEditor && (
         <MediaPageEditor
           page={editingPage}
           onSave={handleSavePage}
           onClose={() => setShowEditor(false)}
+        />
+      )}
+
+      {/* 二维码模态框 */}
+      {showQRCode && qrCodeData && (
+        <QRCodeModal
+          url={qrCodeData.url}
+          title={qrCodeData.title}
+          onClose={() => {
+            setShowQRCode(false);
+            setQrCodeData(null);
+          }}
         />
       )}
     </div>
