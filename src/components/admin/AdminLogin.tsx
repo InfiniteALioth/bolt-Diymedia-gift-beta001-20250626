@@ -4,7 +4,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { OfflineMode } from '../common';
 
 interface AdminLoginProps {
-  onLogin: (username: string, password: string) => boolean;
+  onLogin: (username: string, password: string) => Promise<boolean>;
 }
 
 const AdminLogin: React.FC<AdminLoginProps> = ({ onLogin }) => {
