@@ -63,7 +63,8 @@ class ApiService {
   private connectionListeners: ((status: ConnectionStatus) => void)[] = [];
 
   constructor() {
-    this.baseURL = API_CONFIG.BASE_URL;
+    // 使用相对路径，让 Vite 代理处理
+    this.baseURL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
     this.timeout = API_CONFIG.TIMEOUT;
     
     // 初始化时检查连接
@@ -107,10 +108,13 @@ class ApiService {
     this.setConnectionStatus('checking');
     
     try {
-      const response = await fetch(`${this.baseURL.replace('/api/v1', '')}/health`, {
+      // 使用相对路径，让 Vite 代理处理
+      const response = await fetch('/health', {
         method: 'GET',
-        timeout: 5000,
-        signal: AbortSignal.timeout(5000)
+        headers: {
+          'Accept': 'application/json',
+          'Cache-Control': 'no-cache'
+        }
       });
       
       if (response.ok) {
@@ -239,9 +243,12 @@ class ApiService {
   // 健康检查
   async healthCheck(): Promise<any> {
     try {
-      const response = await fetch(`${this.baseURL.replace('/api/v1', '')}/health`, {
-        timeout: 5000,
-        signal: AbortSignal.timeout(5000)
+      // 使用相对路径，让 Vite 代理处理
+      const response = await fetch('/health', {
+        headers: {
+          'Accept': 'application/json',
+          'Cache-Control': 'no-cache'
+        }
       });
       const data = await response.json();
       return { ...data, connected: true };

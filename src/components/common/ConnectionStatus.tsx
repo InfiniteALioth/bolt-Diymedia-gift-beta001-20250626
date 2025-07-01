@@ -223,7 +223,8 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
             {process.env.NODE_ENV === 'development' && (
               <div className="border-t pt-2 text-gray-600">
                 <div>环境: 开发模式</div>
-                <div>API: {import.meta.env.VITE_API_BASE_URL}</div>
+                <div>API: {import.meta.env.VITE_API_BASE_URL || '相对路径'}</div>
+                <div>代理: http://localhost:3001</div>
               </div>
             )}
           </div>

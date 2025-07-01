@@ -31,21 +31,17 @@ export default defineConfig({
           });
         },
       },
+      // 健康检查代理
+      '/health': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        secure: false,
+      },
       // Socket.IO 代理
       '/socket.io': {
         target: 'http://localhost:3001',
         changeOrigin: true,
         ws: true, // 启用 WebSocket 代理
-        configure: (proxy, _options) => {
-          proxy.on('error', (err, _req, _res) => {
-            console.log('🔴 Socket Proxy error:', err);
-          });
-        },
-      },
-      // 健康检查代理
-      '/health': {
-        target: 'http://localhost:3001',
-        changeOrigin: true,
         secure: false,
       }
     }

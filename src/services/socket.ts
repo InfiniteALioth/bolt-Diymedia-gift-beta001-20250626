@@ -60,7 +60,10 @@ class SocketService {
         return;
       }
 
-      this.socket = io(API_CONFIG.SOCKET_URL, {
+      // 使用相对路径，让 Vite 代理处理
+      const socketUrl = import.meta.env.VITE_SOCKET_URL || '';
+      
+      this.socket = io(socketUrl, {
         auth: { token },
         transports: ['websocket', 'polling'],
         timeout: 10000,
@@ -68,6 +71,7 @@ class SocketService {
         reconnectionAttempts: this.maxReconnectAttempts,
         reconnectionDelay: this.reconnectDelay,
         reconnectionDelayMax: 5000,
+        path: '/socket.io'
       });
 
       this.socket.on('connect', () => {
