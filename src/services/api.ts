@@ -4,13 +4,13 @@ import { API_CONFIG, API_ENDPOINTS, ENV_CONFIG, ERROR_MESSAGES } from '../config
 
 // API日志记录
 const logApiCall = (method: string, url: string, data?: any) => {
-  if (ENV_CONFIG.showAPILogs) {
+  if (ENV_CONFIG.showAPILogs || ENV_CONFIG.isDevelopment) {
     console.log(`🌐 API ${method.toUpperCase()}: ${url}`, data ? { data } : '');
   }
 };
 
 const logApiResponse = (method: string, url: string, response: any, error?: any) => {
-  if (ENV_CONFIG.showAPILogs) {
+  if (ENV_CONFIG.showAPILogs || ENV_CONFIG.isDevelopment) {
     if (error) {
       console.error(`❌ API ${method.toUpperCase()} ERROR: ${url}`, error);
     } else {
@@ -18,6 +18,9 @@ const logApiResponse = (method: string, url: string, response: any, error?: any)
     }
   }
 };
+
+// 连接状态类型
+export type ConnectionStatus = 'checking' | 'connected' | 'disconnected' | 'error';
 
 // 错误处理函数
 const handleApiError = (error: any, endpoint: string): Error => {
@@ -53,10 +56,124 @@ const handleApiError = (error: any, endpoint: string): Error => {
 class ApiService {
   private baseURL: string;
   private timeout: number;
+  private connectionStatus: ConnectionStatus = 'checking';
+  private retryAttempts: number = 0;
+  private maxRetries: number = 3;
+  private retryDelay: number = 1000;
+  private connectionListeners: ((status: ConnectionStatus) => void)[] = [];
 
   constructor() {
     this.baseURL = API_CONFIG.BASE_URL;
     this.timeout = API_CONFIG.TIMEOUT;
+    
+    // 初始化时检查连接
+    this.checkConnection();
+    
+    if (ENV_CONFIG.isDevelopment) {
+      console.log('🔧 API Service initialized');
+      console.log('🌐 Base URL:', this.baseURL);
+      console.log('⏱️ Timeout:', this.timeout);
+    }
+  }
+
+  // 连接状态管理
+  private setConnectionStatus(status: ConnectionStatus) {
+    if (this.connectionStatus !== status) {
+      this.connectionStatus = status;
+      this.connectionListeners.forEach(listener => listener(status));
+      
+      if (ENV_CONFIG.isDevelopment) {
+        console.log(`🔗 Connection status changed: ${status}`);
+      }
+    }
+  }
+
+  public getConnectionStatus(): ConnectionStatus {
+    return this.connectionStatus;
+  }
+
+  public onConnectionStatusChange(listener: (status: ConnectionStatus) => void) {
+    this.connectionListeners.push(listener);
+    return () => {
+      const index = this.connectionListeners.indexOf(listener);
+      if (index > -1) {
+        this.connectionListeners.splice(index, 1);
+      }
+    };
+  }
+
+  // 连接检查
+  public async checkConnection(): Promise<boolean> {
+    this.setConnectionStatus('checking');
+    
+    try {
+      const response = await fetch(`${this.baseURL.replace('/api/v1', '')}/health`, {
+        method: 'GET',
+        timeout: 5000,
+        signal: AbortSignal.timeout(5000)
+      });
+      
+      if (response.ok) {
+        this.setConnectionStatus('connected');
+        this.retryAttempts = 0;
+        return true;
+      } else {
+        throw new Error(`Health check failed: ${response.status}`);
+      }
+    } catch (error) {
+      console.error('Connection check failed:', error);
+      this.setConnectionStatus('disconnected');
+      return false;
+    }
+  }
+
+  // 自动重试机制
+  private async retryRequest<T>(
+    requestFn: () => Promise<T>,
+    endpoint: string
+  ): Promise<T> {
+    let lastError: Error;
+    
+    for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
+      try {
+        if (attempt > 0) {
+          // 等待重试延迟
+          await new Promise(resolve => 
+            setTimeout(resolve, this.retryDelay * Math.pow(2, attempt - 1))
+          );
+          
+          if (ENV_CONFIG.isDevelopment) {
+            console.log(`🔄 Retrying request (${attempt}/${this.maxRetries}): ${endpoint}`);
+          }
+        }
+        
+        const result = await requestFn();
+        
+        // 请求成功，重置重试计数
+        this.retryAttempts = 0;
+        if (this.connectionStatus !== 'connected') {
+          this.setConnectionStatus('connected');
+        }
+        
+        return result;
+      } catch (error: any) {
+        lastError = error;
+        
+        // 如果是网络错误，尝试重新连接
+        if (error instanceof TypeError && error.message.includes('fetch')) {
+          this.setConnectionStatus('disconnected');
+          await this.checkConnection();
+        }
+        
+        // 如果是最后一次尝试，抛出错误
+        if (attempt === this.maxRetries) {
+          this.setConnectionStatus('error');
+          break;
+        }
+      }
+    }
+    
+    throw handleApiError(lastError!, endpoint);
   }
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -67,7 +184,6 @@ class ApiService {
         ...API_CONFIG.HEADERS,
         ...options.headers,
       },
-      timeout: this.timeout,
       ...options,
     };
 
@@ -82,41 +198,50 @@ class ApiService {
 
     logApiCall(options.method || 'GET', endpoint, options.body ? JSON.parse(options.body as string) : undefined);
 
-    try {
+    const requestFn = async (): Promise<T> => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), this.timeout);
       
-      const response = await fetch(url, {
-        ...config,
-        signal: controller.signal
-      });
-      
-      clearTimeout(timeoutId);
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        const error = new Error(errorData.message || `HTTP error! status: ${response.status}`);
-        (error as any).status = response.status;
-        logApiResponse(options.method || 'GET', endpoint, null, error);
-        throw handleApiError(error, endpoint);
+      try {
+        const response = await fetch(url, {
+          ...config,
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          const error = new Error(errorData.message || `HTTP error! status: ${response.status}`);
+          (error as any).status = response.status;
+          throw error;
+        }
+        
+        const data = await response.json();
+        const result = data.data || data;
+        
+        logApiResponse(options.method || 'GET', endpoint, result);
+        return result;
+      } catch (error: any) {
+        clearTimeout(timeoutId);
+        
+        if (error.name === 'AbortError') {
+          throw new Error(ERROR_MESSAGES.CONNECTION_TIMEOUT);
+        }
+        
+        throw error;
       }
-      
-      const data = await response.json();
-      const result = data.data || data;
-      
-      logApiResponse(options.method || 'GET', endpoint, result);
-      return result;
-    } catch (error: any) {
-      logApiResponse(options.method || 'GET', endpoint, null, error);
-      throw handleApiError(error, endpoint);
-    }
+    };
+
+    return this.retryRequest(requestFn, endpoint);
   }
 
   // 健康检查
   async healthCheck(): Promise<any> {
     try {
       const response = await fetch(`${this.baseURL.replace('/api/v1', '')}/health`, {
-        timeout: 5000
+        timeout: 5000,
+        signal: AbortSignal.timeout(5000)
       });
       const data = await response.json();
       return { ...data, connected: true };
@@ -218,7 +343,7 @@ class ApiService {
     
     logApiCall('POST', API_ENDPOINTS.MEDIA.UPLOAD(pageId), { filesCount: files.length, caption });
 
-    try {
+    const uploadFn = async (): Promise<MediaItem[]> => {
       const response = await fetch(`${this.baseURL}${API_ENDPOINTS.MEDIA.UPLOAD(pageId)}`, {
         method: 'POST',
         headers: {
@@ -230,8 +355,8 @@ class ApiService {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         const error = new Error(errorData.message || `HTTP error! status: ${response.status}`);
-        logApiResponse('POST', API_ENDPOINTS.MEDIA.UPLOAD(pageId), null, error);
-        throw handleApiError(error, API_ENDPOINTS.MEDIA.UPLOAD(pageId));
+        (error as any).status = response.status;
+        throw error;
       }
 
       const data = await response.json();
@@ -239,10 +364,9 @@ class ApiService {
       
       logApiResponse('POST', API_ENDPOINTS.MEDIA.UPLOAD(pageId), result);
       return result;
-    } catch (error: any) {
-      logApiResponse('POST', API_ENDPOINTS.MEDIA.UPLOAD(pageId), null, error);
-      throw handleApiError(error, API_ENDPOINTS.MEDIA.UPLOAD(pageId));
-    }
+    };
+
+    return this.retryRequest(uploadFn, API_ENDPOINTS.MEDIA.UPLOAD(pageId));
   }
 
   async deleteMedia(mediaId: string): Promise<void> {
@@ -348,7 +472,7 @@ class ApiService {
     
     logApiCall('POST', API_ENDPOINTS.UPLOAD.SINGLE, { fileName: file.name, fileSize: file.size });
 
-    try {
+    const uploadFn = async (): Promise<any> => {
       const response = await fetch(`${this.baseURL}${API_ENDPOINTS.UPLOAD.SINGLE}`, {
         method: 'POST',
         headers: {
@@ -360,8 +484,8 @@ class ApiService {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         const error = new Error(errorData.message || `HTTP error! status: ${response.status}`);
-        logApiResponse('POST', API_ENDPOINTS.UPLOAD.SINGLE, null, error);
-        throw handleApiError(error, API_ENDPOINTS.UPLOAD.SINGLE);
+        (error as any).status = response.status;
+        throw error;
       }
 
       const data = await response.json();
@@ -369,10 +493,9 @@ class ApiService {
       
       logApiResponse('POST', API_ENDPOINTS.UPLOAD.SINGLE, result);
       return result;
-    } catch (error: any) {
-      logApiResponse('POST', API_ENDPOINTS.UPLOAD.SINGLE, null, error);
-      throw handleApiError(error, API_ENDPOINTS.UPLOAD.SINGLE);
-    }
+    };
+
+    return this.retryRequest(uploadFn, API_ENDPOINTS.UPLOAD.SINGLE);
   }
 
   async uploadMultiple(files: File[]): Promise<any[]> {
@@ -383,7 +506,7 @@ class ApiService {
     
     logApiCall('POST', API_ENDPOINTS.UPLOAD.MULTIPLE, { filesCount: files.length });
 
-    try {
+    const uploadFn = async (): Promise<any[]> => {
       const response = await fetch(`${this.baseURL}${API_ENDPOINTS.UPLOAD.MULTIPLE}`, {
         method: 'POST',
         headers: {
@@ -395,8 +518,8 @@ class ApiService {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         const error = new Error(errorData.message || `HTTP error! status: ${response.status}`);
-        logApiResponse('POST', API_ENDPOINTS.UPLOAD.MULTIPLE, null, error);
-        throw handleApiError(error, API_ENDPOINTS.UPLOAD.MULTIPLE);
+        (error as any).status = response.status;
+        throw error;
       }
 
       const data = await response.json();
@@ -404,10 +527,9 @@ class ApiService {
       
       logApiResponse('POST', API_ENDPOINTS.UPLOAD.MULTIPLE, result);
       return result;
-    } catch (error: any) {
-      logApiResponse('POST', API_ENDPOINTS.UPLOAD.MULTIPLE, null, error);
-      throw handleApiError(error, API_ENDPOINTS.UPLOAD.MULTIPLE);
-    }
+    };
+
+    return this.retryRequest(uploadFn, API_ENDPOINTS.UPLOAD.MULTIPLE);
   }
 
   async logout(): Promise<void> {
@@ -424,7 +546,7 @@ class ApiService {
 export const apiService = new ApiService();
 
 // 导出调试信息
-if (ENV_CONFIG.debugMode) {
+if (ENV_CONFIG.debugMode || ENV_CONFIG.isDevelopment) {
   (window as any).apiService = apiService;
   (window as any).API_CONFIG = API_CONFIG;
   console.log('🔧 Debug mode enabled. API service available as window.apiService');

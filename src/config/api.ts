@@ -98,7 +98,8 @@ export const ENV_CONFIG = {
   showAPILogs: import.meta.env.VITE_SHOW_API_LOGS === 'true',
   debugMode: import.meta.env.VITE_DEBUG_MODE === 'true',
   appName: import.meta.env.VITE_APP_NAME || '互动媒体展示平台',
-  appVersion: import.meta.env.VITE_APP_VERSION || '1.0.0'
+  appVersion: import.meta.env.VITE_APP_VERSION || '1.0.0',
+  appMode: import.meta.env.VITE_APP_MODE || 'development'
 };
 
 // 错误消息映射
@@ -113,3 +114,13 @@ export const ERROR_MESSAGES = {
   CONNECTION_TIMEOUT: '连接超时，请重试',
   UNKNOWN_ERROR: '未知错误，请联系管理员'
 };
+
+// 开发环境日志
+if (ENV_CONFIG.isDevelopment) {
+  console.log('🔧 API Configuration loaded:');
+  console.log('📡 Base URL:', API_CONFIG.BASE_URL);
+  console.log('🔌 Socket URL:', API_CONFIG.SOCKET_URL);
+  console.log('🎭 Mock API:', ENV_CONFIG.useMockAPI);
+  console.log('📊 Debug Mode:', ENV_CONFIG.debugMode);
+  console.log('📝 API Logs:', ENV_CONFIG.showAPILogs);
+}
