@@ -14,6 +14,9 @@ const OfflineMode: React.FC<OfflineModeProps> = ({
 }) => {
   const [isRetrying, setIsRetrying] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  
+  // 检查是否使用模拟API
+  const useMockApi = import.meta.env.VITE_USE_MOCK_API === 'true';
 
   const handleRetry = async () => {
     if (isRetrying) return;
@@ -27,6 +30,55 @@ const OfflineMode: React.FC<OfflineModeProps> = ({
       setIsRetrying(false);
     }
   };
+
+  // 如果使用模拟API，显示特殊提示
+  if (useMockApi) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
+        <div className="max-w-md w-full text-center">
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-8 border border-white/20">
+            <div className="w-16 h-16 bg-green-500/20 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto mb-4">
+              <Server className="h-8 w-8 text-green-400" />
+            </div>
+            <h1 className="text-2xl font-bold text-white mb-2">模拟API模式</h1>
+            <p className="text-gray-300 mb-6">
+              您当前正在使用模拟API模式，无需连接后端服务器。所有数据都是本地模拟的。
+            </p>
+            <div className="space-y-3">
+              <button
+                onClick={() => window.location.href = '/'}
+                className="w-full flex items-center justify-center space-x-2 px-6 py-3 bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl"
+              >
+                <RefreshCw className="h-5 w-5" />
+                <span>返回首页</span>
+              </button>
+              
+              {showAdminLink && (
+                <button
+                  onClick={() => window.location.href = '/admin'}
+                  className="w-full flex items-center justify-center space-x-2 px-6 py-3 bg-gray-600/50 hover:bg-gray-600/70 text-white rounded-lg transition-all duration-200"
+                >
+                  <Settings className="h-5 w-5" />
+                  <span>管理后台</span>
+                </button>
+              )}
+            </div>
+            
+            <div className="mt-6 p-4 bg-blue-500/20 border border-blue-500/30 rounded-lg text-left">
+              <h3 className="text-sm font-medium text-blue-200 mb-2 flex items-center">
+                <Info className="h-4 w-4 mr-2" />
+                模拟API模式说明
+              </h3>
+              <p className="text-xs text-blue-300 leading-relaxed">
+                在模拟API模式下，所有数据都存储在浏览器本地，无需连接后端服务器。
+                这种模式适合前端开发和测试，但数据不会持久化到服务器。
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">

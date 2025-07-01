@@ -35,14 +35,24 @@ export default defineConfig({
       '/health': {
         target: 'http://localhost:3001',
         changeOrigin: true,
-        secure: false
+        secure: false,
+        configure: (proxy, _options) => {
+          proxy.on('error', (err, _req, _res) => {
+            console.log('Health check proxy error:', err);
+          });
+        }
       },
       // Socket.IO 代理
       '/socket.io': {
         target: 'http://localhost:3001',
         changeOrigin: true,
         ws: true, // 启用 WebSocket 代理
-        secure: false
+        secure: false,
+        configure: (proxy, _options) => {
+          proxy.on('error', (err, _req, _res) => {
+            console.log('Socket.IO proxy error:', err);
+          });
+        }
       }
     }
   },

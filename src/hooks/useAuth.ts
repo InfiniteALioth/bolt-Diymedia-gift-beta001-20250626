@@ -22,6 +22,7 @@ export function useAuth() {
   // 检查后端连接状态
   const checkConnection = useCallback(async () => {
     if (USE_MOCK_API) {
+      console.log('Using Mock API mode - skipping real backend connection check');
       setConnectionStatus('connected');
       return true;
     }
@@ -42,11 +43,17 @@ export function useAuth() {
 
   // 初始化时检查连接
   useEffect(() => {
+    // 如果使用模拟API，直接设置为已连接
+    if (USE_MOCK_API) {
+      setConnectionStatus('connected');
+      return;
+    }
+    
     checkConnection();
     
     // 设置定期检查
     const interval = setInterval(() => {
-      if (connectionStatus !== 'connected') {
+      if (connectionStatus !== 'connected' && !USE_MOCK_API) {
         checkConnection();
       }
     }, 30000); // 每30秒检查一次
@@ -56,6 +63,11 @@ export function useAuth() {
 
   // 监听API服务的连接状态变化
   useEffect(() => {
+    // 如果使用模拟API，不需要监听连接状态
+    if (USE_MOCK_API) {
+      return () => {};
+    }
+    
     const unsubscribe = apiService.onConnectionStatusChange((status) => {
       setConnectionStatus(
         status === 'connected' ? 'connected' :

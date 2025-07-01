@@ -105,6 +105,13 @@ class ApiService {
 
   // 连接检查
   public async checkConnection(): Promise<boolean> {
+    // 如果使用Mock API，直接返回连接成功
+    if (ENV_CONFIG.useMockAPI) {
+      console.log('Using Mock API mode - skipping real backend connection check');
+      this.setConnectionStatus('connected');
+      return true;
+    }
+    
     this.setConnectionStatus('checking');
     
     try {
@@ -189,6 +196,12 @@ class ApiService {
   }
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+    // 如果使用Mock API，直接返回模拟数据
+    if (ENV_CONFIG.useMockAPI) {
+      console.warn(`Using Mock API for ${options.method || 'GET'} ${endpoint} - real API call skipped`);
+      throw new Error('Mock API mode is enabled, but no mock handler is available for this endpoint');
+    }
+    
     const url = `${this.baseURL}${endpoint}`;
     
     const config: RequestInit = {
@@ -251,6 +264,17 @@ class ApiService {
   // 健康检查
   async healthCheck(): Promise<any> {
     try {
+      // 如果使用Mock API，返回模拟的健康状态
+      if (ENV_CONFIG.useMockAPI) {
+        return { 
+          status: 'OK', 
+          message: 'Using Mock API',
+          connected: true,
+          timestamp: new Date().toISOString(),
+          mode: 'mock'
+        };
+      }
+      
       // 使用相对路径，让 Vite 代理处理
       const response = await fetch('/health', {
         headers: {

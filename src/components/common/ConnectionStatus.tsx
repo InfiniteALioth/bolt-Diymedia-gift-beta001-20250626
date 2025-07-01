@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Wifi, WifiOff, AlertCircle, RefreshCw, CheckCircle, Clock } from 'lucide-react';
+import { Wifi, WifiOff, AlertCircle, RefreshCw, Clock, Check } from 'lucide-react';
 import { apiService } from '../../services/api';
 import { socketService } from '../../services/socket';
 
@@ -22,6 +22,9 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
   const [lastChecked, setLastChecked] = useState<Date>(new Date());
   const [retryCount, setRetryCount] = useState(0);
 
+  // 检查是否使用模拟API
+  const useMockApi = import.meta.env.VITE_USE_MOCK_API === 'true';
+
   // 位置样式映射
   const positionClasses = {
     'top-left': 'top-4 left-4',
@@ -31,6 +34,12 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
   };
 
   useEffect(() => {
+    // 如果使用模拟API，直接设置为已连接状态
+    if (useMockApi) {
+      setApiStatus('connected');
+      return;
+    }
+    
     // 监听 API 连接状态变化
     const unsubscribe = apiService.onConnectionStatusChange((status) => {
       setApiStatus(status);
@@ -57,9 +66,14 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
       unsubscribe();
       clearInterval(interval);
     };
-  }, [apiStatus]);
+  }, [apiStatus, useMockApi]);
 
   useEffect(() => {
+    // 如果使用模拟API，不需要检查Socket状态
+    if (useMockApi) {
+      return;
+    }
+    
     // 监听 Socket.IO 连接状态
     const checkSocketStatus = () => {
       setSocketStatus(socketService.isSocketConnected());
@@ -72,17 +86,26 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
     const socketInterval = setInterval(checkSocketStatus, 5000);
 
     return () => clearInterval(socketInterval);
-  }, []);
+  }, [useMockApi]);
 
   const handleRetryConnection = async () => {
+    if (useMockApi) {
+      setApiStatus('connected');
+      return;
+    }
+    
     setApiStatus('checking');
     await apiService.checkConnection();
   };
 
   const getStatusIcon = () => {
+    if (useMockApi) {
+      return <Check className="h-4 w-4 text-green-500" />;
+    }
+    
     switch (apiStatus) {
       case 'connected':
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
+        return <Check className="h-4 w-4 text-green-500" />;
       case 'checking':
         return <RefreshCw className="h-4 w-4 text-blue-500 animate-spin" />;
       case 'disconnected':
@@ -95,6 +118,10 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
   };
 
   const getStatusColor = () => {
+    if (useMockApi) {
+      return 'bg-green-100 border-green-300 text-green-800';
+    }
+    
     switch (apiStatus) {
       case 'connected':
         return 'bg-green-100 border-green-300 text-green-800';
@@ -110,6 +137,10 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
   };
 
   const getStatusText = () => {
+    if (useMockApi) {
+      return '模拟API模式';
+    }
+    
     switch (apiStatus) {
       case 'connected':
         return '已连接';
@@ -132,7 +163,7 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
     });
   };
 
-  if (!showDetails && apiStatus === 'connected') {
+  if (!showDetails && (apiStatus === 'connected' || useMockApi)) {
     return null; // 连接正常时不显示
   }
 
@@ -150,7 +181,7 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
         <div className="flex items-center space-x-2">
           {getStatusIcon()}
           <span className="text-sm font-medium">{getStatusText()}</span>
-          {!isExpanded && (
+          {!isExpanded && !useMockApi && (
             <div className="flex items-center space-x-1">
               {socketStatus ? (
                 <Wifi className="h-3 w-3 text-green-500" />
@@ -169,13 +200,13 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
               <div className="flex justify-between items-center">
                 <span className="font-medium">API 连接:</span>
                 <span className={`px-2 py-1 rounded text-xs ${getStatusColor()}`}>
-                  {getStatusText()}
+                  {useMockApi ? '模拟API模式' : getStatusText()}
                 </span>
               </div>
               <div className="text-gray-600 mt-1">
                 最后检查: {formatTime(lastChecked)}
               </div>
-              {retryCount > 0 && (
+              {retryCount > 0 && !useMockApi && (
                 <div className="text-orange-600">
                   重试次数: {retryCount}
                 </div>
@@ -183,31 +214,35 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
             </div>
 
             {/* Socket.IO 连接详情 */}
-            <div className="border-t pt-2">
-              <div className="flex justify-between items-center">
-                <span className="font-medium">实时连接:</span>
-                <span className={`px-2 py-1 rounded text-xs ${
-                  socketStatus 
-                    ? 'bg-green-100 text-green-700' 
-                    : 'bg-gray-100 text-gray-700'
-                }`}>
-                  {socketStatus ? '已连接' : '未连接'}
-                </span>
+            {!useMockApi && (
+              <div className="border-t pt-2">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">实时连接:</span>
+                  <span className={`px-2 py-1 rounded text-xs ${
+                    socketStatus 
+                      ? 'bg-green-100 text-green-700' 
+                      : 'bg-gray-100 text-gray-700'
+                  }`}>
+                    {socketStatus ? '已连接' : '未连接'}
+                  </span>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* 操作按钮 */}
             <div className="border-t pt-2 flex space-x-2">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleRetryConnection();
-                }}
-                disabled={apiStatus === 'checking'}
-                className="flex-1 px-2 py-1 bg-white bg-opacity-50 hover:bg-opacity-70 rounded text-xs font-medium transition-colors duration-200 disabled:opacity-50"
-              >
-                {apiStatus === 'checking' ? '检查中...' : '重新连接'}
-              </button>
+              {!useMockApi && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRetryConnection();
+                  }}
+                  disabled={apiStatus === 'checking'}
+                  className="flex-1 px-2 py-1 bg-white bg-opacity-50 hover:bg-opacity-70 rounded text-xs font-medium transition-colors duration-200 disabled:opacity-50"
+                >
+                  {apiStatus === 'checking' ? '检查中...' : '重新连接'}
+                </button>
+              )}
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -223,8 +258,9 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
             {process.env.NODE_ENV === 'development' && (
               <div className="border-t pt-2 text-gray-600">
                 <div>环境: 开发模式</div>
+                <div>API模式: {useMockApi ? '模拟API' : '真实API'}</div>
                 <div>API: {import.meta.env.VITE_API_BASE_URL || '相对路径'}</div>
-                <div>代理: http://localhost:3001</div>
+                {!useMockApi && <div>代理: http://localhost:3001</div>}
               </div>
             )}
           </div>
