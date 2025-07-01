@@ -695,6 +695,7 @@ export const deploymentApi = {
 if (ENV_CONFIG.debugMode || ENV_CONFIG.isDevelopment) {
   (window as any).apiService = apiService;
   (window as any).API_CONFIG = API_CONFIG;
+  (window as any).deploymentApi = deploymentApi;
   console.log('🔧 Debug mode enabled. API service available as window.apiService');
   console.log('🌐 API Base URL:', API_CONFIG.BASE_URL);
   console.log('🎭 Mock API Mode:', ENV_CONFIG.useMockApi);

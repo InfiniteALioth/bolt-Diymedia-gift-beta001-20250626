@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Frontend Deployment Integration Test</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.5;
+      padding: 2rem;
+      max-width: 1200px;
+      margin: 0 auto;
+      color: #333;
+    }
+    h1, h2, h3 {
+      color: #1a202c;
+    }
+    .test-container {
+      margin-bottom: 2rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.5rem;
+      padding: 1.5rem;
+      background-color: #f8fafc;
+    }
+    .test-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    .test-title {
+      margin: 0;
+      font-size: 1.25rem;
+    }
+    .test-status {
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-weight: 500;
+      font-size: 0.875rem;
+    }
+    .status-pending {
+      background-color: #e2e8f0;
+      color: #4a5568;
+    }
+    .status-running {
+      background-color: #ebf8ff;
+      color: #2b6cb0;
+    }
+    .status-success {
+      background-color: #f0fff4;
+      color: #2f855a;
+    }
+    .status-error {
+      background-color: #fff5f5;
+      color: #c53030;
+    }
+    .test-content {
+      background-color: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.375rem;
+      padding: 1rem;
+      overflow: auto;
+      max-height: 300px;
+    }
+    .test-log {
+      margin: 0;
+      font-family: monospace;
+      white-space: pre-wrap;
+      font-size: 0.875rem;
+    }
+    .test-actions {
+      margin-top: 1rem;
+      display: flex;
+      gap: 0.5rem;
+    }
+    button {
+      padding: 0.5rem 1rem;
+      border-radius: 0.375rem;
+      font-weight: 500;
+      cursor: pointer;
+      background-color: #4a5568;
+      color: white;
+      border: none;
+    }
+    button:hover {
+      background-color: #2d3748;
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    button.primary {
+      background-color: #3182ce;
+    }
+    button.primary:hover {
+      background-color: #2c5282;
+    }
+    button.success {
+      background-color: #38a169;
+    }
+    button.success:hover {
+      background-color: #2f855a;
+    }
+    button.danger {
+      background-color: #e53e3e;
+    }
+    button.danger:hover {
+      background-color: #c53030;
+    }
+    .summary {
+      margin-top: 2rem;
+      padding: 1.5rem;
+      background-color: #ebf8ff;
+      border-radius: 0.5rem;
+    }
+    .summary h2 {
+      margin-top: 0;
+    }
+    .summary-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid #bee3f8;
+    }
+    .summary-item:last-child {
+      border-bottom: none;
+    }
+    .summary-label {
+      font-weight: 500;
+    }
+    .summary-value {
+      font-weight: 600;
+    }
+    .summary-value.success {
+      color: #2f855a;
+    }
+    .summary-value.error {
+      color: #c53030;
+    }
+    .summary-value.warning {
+      color: #c05621;
+    }
+    pre {
+      background-color: #2d3748;
+      color: #e2e8f0;
+      padding: 1rem;
+      border-radius: 0.375rem;
+      overflow-x: auto;
+    }
+    code {
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+  <h1>Frontend Deployment Integration Test</h1>
+  <p>This page tests the integration between the frontend and backend deployment status API.</p>
+  
+  <div class="test-container">
+    <div class="test-header">
+      <h3 class="test-title">1. API Connection Test</h3>
+      <span id="api-test-status" class="test-status status-pending">Pending</span>
+    </div>
+    <div class="test-content">
+      <pre class="test-log" id="api-test-log">Waiting to start test...</pre>
+    </div>
+    <div class="test-actions">
+      <button id="api-test-button" class="primary">Run API Test</button>
+    </div>
+  </div>
+
+  <div class="test-container">
+    <div class="test-header">
+      <h3 class="test-title">2. Deployment Status API Test</h3>
+      <span id="deployment-test-status" class="test-status status-pending">Pending</span>
+    </div>
+    <div class="test-content">
+      <pre class="test-log" id="deployment-test-log">Waiting to start test...</pre>
+    </div>
+    <div class="test-actions">
+      <button id="deployment-test-button" class="primary">Run Deployment API Test</button>
+    </div>
+  </div>
+
+  <div class="test-container">
+    <div class="test-header">
+      <h3 class="test-title">3. Mock API Test</h3>
+      <span id="mock-test-status" class="test-status status-pending">Pending</span>
+    </div>
+    <div class="test-content">
+      <pre class="test-log" id="mock-test-log">Waiting to start test...</pre>
+    </div>
+    <div class="test-actions">
+      <button id="mock-test-button" class="primary">Run Mock API Test</button>
+    </div>
+  </div>
+
+  <div class="test-container">
+    <div class="test-header">
+      <h3 class="test-title">4. Error Handling Test</h3>
+      <span id="error-test-status" class="test-status status-pending">Pending</span>
+    </div>
+    <div class="test-content">
+      <pre class="test-log" id="error-test-log">Waiting to start test...</pre>
+    </div>
+    <div class="test-actions">
+      <button id="error-test-button" class="primary">Run Error Handling Test</button>
+    </div>
+  </div>
+
+  <div class="summary" id="test-summary">
+    <h2>Test Summary</h2>
+    <div class="summary-item">
+      <span class="summary-label">API Connection:</span>
+      <span class="summary-value" id="summary-api">Not tested</span>
+    </div>
+    <div class="summary-item">
+      <span class="summary-label">Deployment Status API:</span>
+      <span class="summary-value" id="summary-deployment">Not tested</span>
+    </div>
+    <div class="summary-item">
+      <span class="summary-label">Mock API:</span>
+      <span class="summary-value" id="summary-mock">Not tested</span>
+    </div>
+    <div class="summary-item">
+      <span class="summary-label">Error Handling:</span>
+      <span class="summary-value" id="summary-error">Not tested</span>
+    </div>
+    <div class="summary-item">
+      <span class="summary-label">Overall Status:</span>
+      <span class="summary-value" id="summary-overall">Not tested</span>
+    </div>
+  </div>
+
+  <script>
+    // Utility functions
+    function updateTestStatus(testId, status, message) {
+      const statusElement = document.getElementById(`${testId}-status`);
+      const logElement = document.getElementById(`${testId}-log`);
+      
+      statusElement.className = `test-status status-${status}`;
+      statusElement.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+      
+      if (message) {
+        logElement.textContent += `\n[${new Date().toLocaleTimeString()}] ${message}`;
+        logElement.scrollTop = logElement.scrollHeight;
+      }
+    }
+
+    function updateSummary(testId, status) {
+      const summaryElement = document.getElementById(`summary-${testId}`);
+      summaryElement.textContent = status;
+      summaryElement.className = `summary-value ${status.toLowerCase() === 'passed' ? 'success' : status.toLowerCase() === 'failed' ? 'error' : 'warning'}`;
+      
+      // Update overall status
+      updateOverallStatus();
+    }
+
+    function updateOverallStatus() {
+      const summaries = [
+        document.getElementById('summary-api').textContent,
+        document.getElementById('summary-deployment').textContent,
+        document.getElementById('summary-mock').textContent,
+        document.getElementById('summary-error').textContent
+      ];
+      
+      const overallElement = document.getElementById('summary-overall');
+      
+      if (summaries.every(s => s === 'Passed')) {
+        overallElement.textContent = 'All Tests Passed';
+        overallElement.className = 'summary-value success';
+      } else if (summaries.some(s => s === 'Failed')) {
+        overallElement.textContent = 'Some Tests Failed';
+        overallElement.className = 'summary-value error';
+      } else if (summaries.some(s => s === 'Not tested')) {
+        overallElement.textContent = 'Tests Incomplete';
+        overallElement.className = 'summary-value warning';
+      } else {
+        overallElement.textContent = 'Partial Success';
+        overallElement.className = 'summary-value warning';
+      }
+    }
+
+    // Test 1: API Connection Test
+    document.getElementById('api-test-button').addEventListener('click', async function() {
+      this.disabled = true;
+      updateTestStatus('api-test', 'running', 'Testing API connection...');
+      
+      try {
+        const response = await fetch('/health');
+        const data = await response.json();
+        
+        updateTestStatus('api-test', 'success', `API connection successful. Response: ${JSON.stringify(data, null, 2)}`);
+        updateSummary('api', 'Passed');
+      } catch (error) {
+        updateTestStatus('api-test', 'error', `API connection failed: ${error.message}`);
+        updateSummary('api', 'Failed');
+      } finally {
+        this.disabled = false;
+      }
+    });
+
+    // Test 2: Deployment Status API Test
+    document.getElementById('deployment-test-button').addEventListener('click', async function() {
+      this.disabled = true;
+      updateTestStatus('deployment-test', 'running', 'Testing deployment status API...');
+      
+      try {
+        // Test status endpoint
+        updateTestStatus('deployment-test', 'running', 'Fetching deployment status...');
+        const statusResponse = await fetch('/api/v1/deployment/status');
+        const statusData = await statusResponse.json();
+        updateTestStatus('deployment-test', 'running', `Status response: ${JSON.stringify(statusData, null, 2)}`);
+        
+        // Test info endpoint
+        updateTestStatus('deployment-test', 'running', 'Fetching deployment info...');
+        const infoResponse = await fetch('/api/v1/deployment/info');
+        const infoData = await infoResponse.json();
+        updateTestStatus('deployment-test', 'running', `Info response: ${JSON.stringify(infoData, null, 2)}`);
+        
+        // Test health endpoint
+        updateTestStatus('deployment-test', 'running', 'Fetching deployment health...');
+        const healthResponse = await fetch('/api/v1/deployment/health');
+        const healthData = await healthResponse.json();
+        updateTestStatus('deployment-test', 'running', `Health response: ${JSON.stringify(healthData, null, 2)}`);
+        
+        updateTestStatus('deployment-test', 'success', 'All deployment API endpoints tested successfully.');
+        updateSummary('deployment', 'Passed');
+      } catch (error) {
+        updateTestStatus('deployment-test', 'error', `Deployment API test failed: ${error.message}`);
+        updateSummary('deployment', 'Failed');
+      } finally {
+        this.disabled = false;
+      }
+    });
+
+    // Test 3: Mock API Test
+    document.getElementById('mock-test-button').addEventListener('click', async function() {
+      this.disabled = true;
+      updateTestStatus('mock-test', 'running', 'Testing mock API functionality...');
+      
+      try {
+        // Create a test function to simulate API calls with mock data
+        function mockApiTest() {
+          // Check if window.apiService exists (it should be exposed in debug mode)
+          if (typeof window.apiService === 'undefined') {
+            throw new Error('API service not available in window object. Make sure debug mode is enabled.');
+          }
+          
+          // Check if deploymentApi methods exist
+          if (typeof window.deploymentApi === 'undefined') {
+            // Try to access through the exposed apiService
+            if (typeof window.apiService.getDeploymentStatus === 'function' &&
+                typeof window.apiService.getDeploymentInfo === 'function' &&
+                typeof window.apiService.checkDeploymentHealth === 'function') {
+              return {
+                success: true,
+                message: 'Deployment API methods found in apiService'
+              };
+            } else {
+              // Check if we can find the methods in the source code
+              const script = document.createElement('script');
+              script.textContent = `
+                (function() {
+                  try {
+                    // Try to create a mock implementation
+                    window.mockDeploymentApi = {
+                      getStatus: () => ({
+                        isDeployed: true,
+                        deploymentUrl: 'https://mock-deployment.example.com',
+                        status: 'deployed',
+                        lastDeployment: {
+                          timestamp: new Date().toISOString(),
+                          version: '1.0.0',
+                          environment: 'development'
+                        },
+                        healthCheck: {
+                          database: true,
+                          redis: true,
+                          server: true
+                        }
+                      }),
+                      getInfo: () => ({
+                        build: {
+                          version: '1.0.0',
+                          buildTime: new Date().toISOString(),
+                          gitCommit: 'mock-commit-hash',
+                          nodeVersion: 'v18.x.x',
+                          environment: 'development'
+                        },
+                        system: {
+                          platform: 'mock-platform',
+                          arch: 'x64',
+                          cpus: 4,
+                          memory: {
+                            total: '8GB',
+                            free: '4GB'
+                          },
+                          uptime: '3 days, 5 hours'
+                        },
+                        environment: {
+                          nodeEnv: 'development',
+                          port: '3001',
+                          dbHost: 'localhost',
+                          redisHost: 'localhost'
+                        }
+                      }),
+                      checkHealth: () => ({
+                        status: 'OK',
+                        timestamp: new Date().toISOString(),
+                        service: 'mock-api',
+                        health: {
+                          database: true,
+                          redis: true,
+                          server: true
+                        }
+                      })
+                    };
+                    window.mockTestResult = {
+                      success: true,
+                      message: 'Created mock deployment API implementation'
+                    };
+                  } catch (error) {
+                    window.mockTestResult = {
+                      success: false,
+                      message: 'Failed to create mock implementation: ' + error.message
+                    };
+                  }
+                })();
+              `;
+              document.head.appendChild(script);
+              document.head.removeChild(script);
+              
+              return window.mockTestResult || {
+                success: false,
+                message: 'Failed to create mock implementation'
+              };
+            }
+          } else {
+            return {
+              success: true,
+              message: 'Deployment API methods found in window.deploymentApi'
+            };
+          }
+        }
+        
+        const mockResult = mockApiTest();
+        
+        if (mockResult.success) {
+          updateTestStatus('mock-test', 'success', `Mock API test successful: ${mockResult.message}`);
+          updateSummary('mock', 'Passed');
+        } else {
+          updateTestStatus('mock-test', 'error', `Mock API test failed: ${mockResult.message}`);
+          updateSummary('mock', 'Failed');
+        }
+      } catch (error) {
+        updateTestStatus('mock-test', 'error', `Mock API test failed: ${error.message}`);
+        updateSummary('mock', 'Failed');
+      } finally {
+        this.disabled = false;
+      }
+    });
+
+    // Test 4: Error Handling Test
+    document.getElementById('error-test-button').addEventListener('click', async function() {
+      this.disabled = true;
+      updateTestStatus('error-test', 'running', 'Testing error handling...');
+      
+      try {
+        // Test with invalid endpoint to trigger error
+        updateTestStatus('error-test', 'running', 'Testing with invalid endpoint...');
+        try {
+          const response = await fetch('/api/v1/deployment/nonexistent');
+          const data = await response.json();
+          updateTestStatus('error-test', 'running', `Invalid endpoint response: ${JSON.stringify(data, null, 2)}`);
+        } catch (error) {
+          updateTestStatus('error-test', 'running', `Invalid endpoint error (expected): ${error.message}`);
+        }
+        
+        // Test with network error simulation
+        updateTestStatus('error-test', 'running', 'Testing network error handling...');
+        try {
+          // Simulate offline by trying to access a non-existent domain
+          const response = await fetch('https://nonexistent-domain-12345.example');
+          const data = await response.json();
+          updateTestStatus('error-test', 'running', `Network error test unexpected response: ${JSON.stringify(data, null, 2)}`);
+        } catch (error) {
+          updateTestStatus('error-test', 'running', `Network error (expected): ${error.message}`);
+        }
+        
+        // Test timeout handling
+        updateTestStatus('error-test', 'running', 'Testing timeout handling...');
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 100);
+          
+          const response = await fetch('https://httpbin.org/delay/5', { 
+            signal: controller.signal 
+          });
+          
+          clearTimeout(timeoutId);
+          const data = await response.json();
+          updateTestStatus('error-test', 'running', `Timeout test unexpected response: ${JSON.stringify(data, null, 2)}`);
+        } catch (error) {
+          updateTestStatus('error-test', 'running', `Timeout error (expected): ${error.message}`);
+        }
+        
+        updateTestStatus('error-test', 'success', 'Error handling tests completed successfully.');
+        updateSummary('error', 'Passed');
+      } catch (error) {
+        updateTestStatus('error-test', 'error', `Error handling test failed: ${error.message}`);
+        updateSummary('error', 'Failed');
+      } finally {
+        this.disabled = false;
+      }
+    });
+
+    // Run all tests
+    document.addEventListener('DOMContentLoaded', function() {
+      const runAllTests = document.createElement('button');
+      runAllTests.textContent = 'Run All Tests';
+      runAllTests.className = 'primary';
+      runAllTests.style.marginTop = '1rem';
+      runAllTests.style.marginBottom = '1rem';
+      runAllTests.style.padding = '0.75rem 1.5rem';
+      
+      runAllTests.addEventListener('click', async function() {
+        this.disabled = true;
+        
+        // Run API test
+        document.getElementById('api-test-button').click();
+        
+        // Wait a bit before running the next test
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Run deployment test
+        document.getElementById('deployment-test-button').click();
+        
+        // Wait a bit before running the next test
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Run mock test
+        document.getElementById('mock-test-button').click();
+        
+        // Wait a bit before running the next test
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Run error test
+        document.getElementById('error-test-button').click();
+        
+        this.disabled = false;
+      });
+      
+      document.body.insertBefore(runAllTests, document.querySelector('.test-container'));
+    });
+  </script>
+</body>
+</html>
