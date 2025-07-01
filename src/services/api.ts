@@ -126,6 +126,14 @@ class ApiService {
       }
     } catch (error) {
       console.error('Connection check failed:', error);
+      
+      // 如果使用Mock API，则忽略连接错误
+      if (ENV_CONFIG.useMockAPI) {
+        console.log('Using Mock API, ignoring connection error');
+        this.setConnectionStatus('connected');
+        return true;
+      }
+      
       this.setConnectionStatus('disconnected');
       return false;
     }
@@ -253,6 +261,16 @@ class ApiService {
       const data = await response.json();
       return { ...data, connected: true };
     } catch (error) {
+      // 如果使用Mock API，返回模拟的健康状态
+      if (ENV_CONFIG.useMockAPI) {
+        return { 
+          status: 'OK', 
+          message: 'Using Mock API',
+          connected: true,
+          timestamp: new Date().toISOString()
+        };
+      }
+      
       return { 
         status: 'error', 
         message: 'Backend not available',
