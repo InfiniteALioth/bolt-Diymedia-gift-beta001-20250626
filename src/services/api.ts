@@ -28,7 +28,8 @@ class ApiService {
       const response = await fetch(url, config);
       
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
       }
       
       const data = await response.json();
@@ -41,17 +42,31 @@ class ApiService {
 
   // 用户相关接口
   async registerUser(username: string, deviceId: string, email?: string): Promise<User> {
-    return this.request<User>('/auth/user/register', {
+    const response = await this.request<{ user: User; accessToken: string }>('/auth/user/register', {
       method: 'POST',
       body: JSON.stringify({ username, deviceId, email }),
     });
+    
+    // 保存 token
+    if (response.accessToken) {
+      localStorage.setItem('authToken', response.accessToken);
+    }
+    
+    return response.user;
   }
 
   async loginUser(deviceId: string, username?: string): Promise<User> {
-    return this.request<User>('/auth/user/login', {
+    const response = await this.request<{ user: User; accessToken: string }>('/auth/user/login', {
       method: 'POST',
       body: JSON.stringify({ deviceId, username }),
     });
+    
+    // 保存 token
+    if (response.accessToken) {
+      localStorage.setItem('authToken', response.accessToken);
+    }
+    
+    return response.user;
   }
 
   // 管理员相关接口
@@ -109,25 +124,34 @@ class ApiService {
     files.forEach(file => formData.append('files', file));
     formData.append('caption', caption);
 
+    const token = localStorage.getItem('authToken');
     const response = await fetch(`${API_BASE_URL}/media/${pageId}`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+        'Authorization': `Bearer ${token}`,
       },
       body: formData,
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
     }
 
     const data = await response.json();
-    return data.data || data;
+    return data.data?.mediaItems || data.mediaItems || [];
   }
 
   async deleteMedia(mediaId: string): Promise<void> {
     return this.request<void>(`/media/${mediaId}`, {
       method: 'DELETE',
+    });
+  }
+
+  async updateMedia(mediaId: string, updates: { caption?: string }): Promise<MediaItem> {
+    return this.request<MediaItem>(`/media/${mediaId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
     });
   }
 
@@ -137,33 +161,141 @@ class ApiService {
   }
 
   async sendMessage(pageId: string, content: string): Promise<ChatMessage> {
-    return this.request<ChatMessage>(`/chat/${pageId}`, {
+    const response = await this.request<{ message: ChatMessage }>(`/chat/${pageId}`, {
       method: 'POST',
       body: JSON.stringify({ content }),
     });
+    return response.message;
+  }
+
+  async deleteMessage(messageId: string): Promise<void> {
+    return this.request<void>(`/chat/${messageId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // 用户相关接口
+  async getUserProfile(): Promise<User> {
+    const response = await this.request<{ user: User }>('/users/profile');
+    return response.user;
+  }
+
+  async updateUserProfile(updates: { username?: string; avatar?: string }): Promise<User> {
+    const response = await this.request<{ user: User }>('/users/profile', {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+    return response.user;
+  }
+
+  async getUserStats(): Promise<any> {
+    const response = await this.request<{ stats: any }>('/users/stats');
+    return response.stats;
   }
 
   // 管理员功能接口
   async getAdmins(): Promise<Admin[]> {
-    return this.request<Admin[]>('/admin/admins');
+    const response = await this.request<{ admins: Admin[] }>('/admin/admins');
+    return response.admins;
   }
 
   async createAdmin(adminData: Omit<Admin, 'id'>): Promise<Admin> {
-    return this.request<Admin>('/admin/admins', {
+    const response = await this.request<{ admin: Admin }>('/admin/admins', {
       method: 'POST',
       body: JSON.stringify(adminData),
+    });
+    return response.admin;
+  }
+
+  async updateAdmin(adminId: string, updates: Partial<Admin>): Promise<Admin> {
+    const response = await this.request<{ admin: Admin }>(`/admin/admins/${adminId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+    return response.admin;
+  }
+
+  async deleteAdmin(adminId: string): Promise<void> {
+    return this.request<void>(`/admin/admins/${adminId}`, {
+      method: 'DELETE',
     });
   }
 
   async getGlobalStats(): Promise<any> {
-    return this.request<any>('/admin/stats');
+    const response = await this.request<{ stats: any }>('/admin/stats');
+    return response.stats;
+  }
+
+  async getUsers(params?: { page?: number; limit?: number; search?: string }): Promise<any> {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.search) queryParams.append('search', params.search);
+    
+    const url = `/admin/users${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    return this.request<any>(url);
+  }
+
+  // 文件上传接口
+  async uploadSingle(file: File): Promise<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const token = localStorage.getItem('authToken');
+    const response = await fetch(`${API_BASE_URL}/upload/single`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.data?.file || data.file;
+  }
+
+  async uploadMultiple(files: File[]): Promise<any[]> {
+    const formData = new FormData();
+    files.forEach(file => formData.append('files', file));
+
+    const token = localStorage.getItem('authToken');
+    const response = await fetch(`${API_BASE_URL}/upload/multiple`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.data?.files || data.files || [];
   }
 
   async logout(): Promise<void> {
-    localStorage.removeItem('authToken');
-    return this.request<void>('/auth/logout', {
-      method: 'POST',
-    });
+    try {
+      await this.request<void>('/auth/logout', {
+        method: 'POST',
+      });
+    } finally {
+      localStorage.removeItem('authToken');
+    }
+  }
+
+  // 健康检查
+  async healthCheck(): Promise<any> {
+    return fetch(`${API_BASE_URL.replace('/api/v1', '')}/health`)
+      .then(res => res.json())
+      .catch(() => ({ status: 'error', message: 'Backend not available' }));
   }
 }
 
