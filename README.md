@@ -81,9 +81,9 @@ src/
 | 变量名 | 说明 | 默认值 |
 |--------|------|--------|
 | `VITE_API_URL` | 后端 API 地址 | `http://localhost:3001/api/v1` |
-| `VITE_USE_MOCK_API` | 是否使用 Mock API | `true` |
-| `VITE_SUPABASE_URL` | Supabase 项目 URL | - |
-| `VITE_SUPABASE_ANON_KEY` | Supabase 匿名密钥 | - |
+| `VITE_USE_MOCK_API` | 是否使用 Mock API | `false` |
+| `VITE_SHOW_API_LOGS` | 是否显示 API 调用日志 | `false` |
+| `VITE_DEBUG_MODE` | 是否启用调试模式 | `false` |
 
 ## 路由说明
 
@@ -98,6 +98,29 @@ src/
 开发模式下的默认管理员账户：
 - 用户名: `superadmin`
 - 密码: `admin123`
+
+## 后端集成
+
+前端已经完全准备好与后端集成：
+
+### API 接口对应
+- 所有前端 API 调用都已对应后端路由
+- JWT token 管理和自动添加到请求头
+- 完善的错误捕获和用户提示
+
+### 文件上传支持
+- FormData 格式上传，支持多文件
+- 文件类型和大小验证
+- 上传进度和错误处理
+
+### 实时通信准备
+- Socket.IO 连接配置已就绪
+- 实时消息和媒体更新
+
+### 连接状态管理
+- 实时检测后端连接状态
+- 自动重连机制
+- 用户友好的错误提示
 
 ## 部署
 
@@ -124,6 +147,16 @@ server {
 
     location / {
         try_files $uri $uri/ /index.html;
+    }
+    
+    # API 代理到后端
+    location /api/ {
+        proxy_pass http://localhost:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
     }
 }
 ```
@@ -152,18 +185,6 @@ server {
 - 使用 Tailwind CSS 类名而不是自定义 CSS
 - Mock API 模式下数据不会持久化
 - 生产环境请确保正确配置环境变量
-
-## 后端项目
-
-后端项目是独立的 Node.js 应用，包含：
-- Express.js API 服务器
-- MySQL 数据库
-- Socket.IO 实时通信
-- 文件上传和存储
-- JWT 认证
-- 管理员权限系统
-
-后端项目应该在单独的目录中开发和部署。
 
 ## 许可证
 
