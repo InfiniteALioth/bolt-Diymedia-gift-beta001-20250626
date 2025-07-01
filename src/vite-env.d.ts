@@ -16,3 +16,9 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+interface Window {
+  apiService?: any;
+  API_CONFIG?: any;
+  socketService?: any;
+}
