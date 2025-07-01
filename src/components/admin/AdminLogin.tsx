@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Shield, Eye, EyeOff, Home, Wifi, WifiOff, RefreshCw } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { OfflineMode } from '../common';
 
 interface AdminLoginProps {
   onLogin: (username: string, password: string) => boolean;
@@ -44,48 +45,13 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLogin }) => {
     window.location.href = '/';
   };
 
-  // 如果是真实API模式且连接断开，显示连接错误
+  // 如果是真实API模式且连接断开，显示离线模式
   if (!USE_MOCK_API && connectionStatus === 'disconnected') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
-        <div className="max-w-md w-full">
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-8 border border-white/20">
-            <div className="text-center mb-8">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-red-500 rounded-full mb-4">
-                <WifiOff className="h-8 w-8 text-white" />
-              </div>
-              <h1 className="text-2xl font-bold text-white mb-2">无法连接到服务器</h1>
-              <p className="text-gray-300">请检查后端服务是否正在运行</p>
-            </div>
-
-            <div className="space-y-4">
-              <button
-                onClick={checkConnection}
-                className="w-full flex items-center justify-center space-x-2 py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all duration-200"
-              >
-                <RefreshCw className="h-5 w-5" />
-                <span>重新连接</span>
-              </button>
-              
-              <button
-                onClick={handleBackToHome}
-                className="w-full flex items-center justify-center space-x-2 py-3 px-4 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-all duration-200"
-              >
-                <Home className="h-5 w-5" />
-                <span>返回首页</span>
-              </button>
-            </div>
-
-            <div className="mt-6 p-4 bg-blue-500/20 border border-blue-500/30 rounded-lg">
-              <h4 className="text-sm font-medium text-blue-200 mb-2">开发者信息</h4>
-              <p className="text-xs text-blue-300">
-                API地址: {import.meta.env.VITE_API_URL}<br/>
-                请确保后端服务在 http://localhost:3001 运行
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <OfflineMode 
+        onRetry={checkConnection}
+        errorMessage="无法连接到管理后台服务器"
+      />
     );
   }
 
@@ -211,7 +177,8 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLogin }) => {
               当前URL: {window.location.href}<br />
               路径: {window.location.pathname}<br />
               API模式: {USE_MOCK_API ? 'Mock API' : 'Real API'}<br />
-              API地址: {import.meta.env.VITE_API_URL}
+              API地址: {import.meta.env.VITE_API_URL || '默认地址'}<br />
+              连接状态: {connectionStatus}
             </p>
           </div>
         </div>
