@@ -11,6 +11,7 @@ import ChatPanel from './ChatPanel';
 import MediaUpload from './MediaUpload';
 import UserSetup from './UserSetup';
 import UserInfoModal from './UserInfoModal';
+import { OfflineMode, LoadingScreen } from './common';
 import { User, ChevronDown, AlertCircle, Home, Settings, Wifi, WifiOff, RefreshCw } from 'lucide-react';
 
 // 开发模式开关
@@ -27,6 +28,8 @@ const MediaPage: React.FC = () => {
   const [pageNotFound, setPageNotFound] = useState(false);
   const [pageData, setPageData] = useState<MediaPageType | null>(null);
   const [isLoadingPage, setIsLoadingPage] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [isRetrying, setIsRetrying] = useState(false);
 
   // 确定当前页面ID
   const currentPageId = pageId || 'page_demo';
@@ -49,6 +52,8 @@ const MediaPage: React.FC = () => {
   useEffect(() => {
     const loadPageData = async () => {
       setIsLoadingPage(true);
+      setLoadError(null);
+      
       try {
         const api = USE_MOCK_API ? mockApiService : apiService;
         let foundPage: MediaPageType | null = null;
@@ -62,11 +67,17 @@ const MediaPage: React.FC = () => {
           // 尝试通过 ID 或代码获取页面
           try {
             foundPage = await api.getPageById(currentPageId);
-          } catch {
-            try {
-              foundPage = await api.getPageByCode(currentPageId);
-            } catch {
-              foundPage = null;
+          } catch (error) {
+            // 如果通过ID获取失败，尝试通过代码获取
+            if (error instanceof Error && !error.message.includes('fetch')) {
+              try {
+                foundPage = await api.getPageByCode(currentPageId);
+              } catch {
+                foundPage = null;
+              }
+            } else {
+              // 如果是网络错误，直接抛出
+              throw error;
             }
           }
         }
@@ -108,7 +119,25 @@ const MediaPage: React.FC = () => {
         }
       } catch (error) {
         console.error('Failed to load page data:', error);
-        setPageNotFound(true);
+        
+        // 提供更友好的错误消息
+        let errorMessage = '加载页面数据失败';
+        if (error instanceof Error) {
+          if (error.message.includes('fetch')) {
+            errorMessage = '无法连接到服务器，请检查网络连接';
+          } else if (error.message.includes('timeout')) {
+            errorMessage = '服务器响应超时，请稍后再试';
+          } else {
+            errorMessage = error.message;
+          }
+        }
+        
+        setLoadError(errorMessage);
+        
+        // 如果是网络错误，不设置页面未找到
+        if (!(error instanceof Error && error.message.includes('fetch'))) {
+          setPageNotFound(true);
+        }
       } finally {
         setIsLoadingPage(false);
       }
@@ -133,71 +162,59 @@ const MediaPage: React.FC = () => {
     return () => clearInterval(timer);
   }, [pageData?.isActive]);
 
+  // 重试连接
+  const handleRetryConnection = async () => {
+    setIsRetrying(true);
+    try {
+      const isConnected = await checkConnection();
+      if (isConnected) {
+        // 重新加载页面数据
+        setIsLoadingPage(true);
+        setLoadError(null);
+        setPageNotFound(false);
+        
+        const api = USE_MOCK_API ? mockApiService : apiService;
+        try {
+          const foundPage = await api.getPageById(currentPageId);
+          setPageData(foundPage);
+          await reloadData();
+        } catch (error) {
+          console.error('Failed to reload page data:', error);
+          throw error;
+        } finally {
+          setIsLoadingPage(false);
+        }
+      }
+    } catch (error) {
+      console.error('Retry connection failed:', error);
+    } finally {
+      setIsRetrying(false);
+    }
+  };
+
   // Handle first-time user setup
   if (!user) {
     return <UserSetup onComplete={createUser} />;
   }
 
-  // 连接状态检查
-  if (!USE_MOCK_API && connectionStatus === 'disconnected') {
+  // 连接状态检查 - 如果不是使用模拟API且连接断开
+  if (!USE_MOCK_API && (connectionStatus === 'disconnected' || loadError?.includes('无法连接到服务器'))) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-red-50 flex items-center justify-center p-4">
-        <div className="max-w-md w-full text-center">
-          <div className="bg-white rounded-2xl shadow-xl p-8 border border-red-200">
-            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <WifiOff className="h-8 w-8 text-red-600" />
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">无法连接到服务器</h1>
-            <p className="text-gray-600 mb-6">
-              请检查网络连接或确保后端服务正在运行。
-            </p>
-            <div className="space-y-3">
-              <button
-                onClick={checkConnection}
-                className="w-full flex items-center justify-center space-x-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl"
-              >
-                <RefreshCw className="h-5 w-5" />
-                <span>重新连接</span>
-              </button>
-              <button
-                onClick={() => window.location.href = '/admin'}
-                className="w-full flex items-center justify-center space-x-2 px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all duration-200"
-              >
-                <Settings className="h-5 w-5" />
-                <span>管理后台</span>
-              </button>
-            </div>
-            <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <h4 className="text-sm font-medium text-blue-800 mb-2">开发者信息</h4>
-              <p className="text-xs text-blue-700">
-                API地址: {import.meta.env.VITE_API_URL}<br/>
-                请确保后端服务在 http://localhost:3001 运行
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <OfflineMode 
+        onRetry={handleRetryConnection}
+        errorMessage={loadError || '无法连接到后端服务器'}
+      />
     );
   }
 
   // 页面加载中
   if (isLoadingPage) {
     return (
-      <div className="w-full h-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-center text-white p-4">
-          <div className="w-16 h-16 bg-white bg-opacity-10 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
-            <User className="h-8 w-8" />
-          </div>
-          <h3 className="text-xl font-semibold mb-2">加载页面中...</h3>
-          <p className="text-gray-300 mb-4">正在验证页面信息</p>
-          {!USE_MOCK_API && (
-            <div className="flex items-center justify-center space-x-2 text-sm">
-              <Wifi className="h-4 w-4 text-green-400" />
-              <span className="text-green-400">已连接到后端</span>
-            </div>
-          )}
-        </div>
-      </div>
+      <LoadingScreen 
+        message="加载页面中..."
+        connectionStatus={connectionStatus === 'connected' ? 'connected' : 
+                         isRetrying ? 'checking' : 'disconnected'}
+      />
     );
   }
 
@@ -275,26 +292,11 @@ const MediaPage: React.FC = () => {
   // 等待数据加载完成
   if (!isLoaded || !pageData) {
     return (
-      <div className="w-full h-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-center text-white p-4">
-          <div className="w-16 h-16 bg-white bg-opacity-10 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
-            <User className="h-8 w-8" />
-          </div>
-          <h3 className="text-xl font-semibold mb-2">加载中...</h3>
-          <p className="text-gray-300 mb-4">正在加载媒体内容</p>
-          {error && (
-            <div className="mt-4 p-3 bg-red-500/20 border border-red-500/30 rounded-lg">
-              <p className="text-red-300 text-sm">{error}</p>
-              <button
-                onClick={reloadData}
-                className="mt-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200"
-              >
-                重试
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
+      <LoadingScreen 
+        message="加载媒体内容中..."
+        connectionStatus={connectionStatus === 'connected' ? 'connected' : 
+                         connectionStatus === 'checking' ? 'checking' : 'disconnected'}
+      />
     );
   }
 
@@ -303,8 +305,14 @@ const MediaPage: React.FC = () => {
       setCurrentMediaIndex(0);
     }
     
-    await addMediaItems(files, user.username, caption, user.id, currentPageId);
-    setShowUpload(false);
+    try {
+      await addMediaItems(files, user.username, caption, user.id, currentPageId);
+      setShowUpload(false);
+    } catch (error) {
+      // 错误已在 addMediaItems 中处理
+      console.error('Upload failed:', error);
+      // 不关闭上传对话框，让用户可以重试
+    }
   };
 
   const handleSendMessage = (content: string) => {
@@ -317,22 +325,34 @@ const MediaPage: React.FC = () => {
       pageId: currentPageId,
     };
     
-    addChatMessage(message);
+    addChatMessage(message).catch(error => {
+      console.error('Send message failed:', error);
+      // 错误已在 addChatMessage 中处理
+    });
   };
 
   const handleUsernameUpdate = (newUsername: string) => {
-    updateUsername(newUsername);
-    setShowUserInfo(false);
+    updateUsername(newUsername)
+      .then(() => setShowUserInfo(false))
+      .catch(error => {
+        console.error('Update username failed:', error);
+        alert(`更新用户名失败: ${error.message}`);
+      });
   };
 
   const handleDeleteCurrentMedia = () => {
     if (mediaItems.length > 0 && currentMediaIndex < mediaItems.length) {
       const currentMedia = mediaItems[currentMediaIndex];
-      removeMediaItem(currentMedia.id);
-      
-      if (currentMediaIndex >= mediaItems.length - 1) {
-        setCurrentMediaIndex(Math.max(0, mediaItems.length - 2));
-      }
+      removeMediaItem(currentMedia.id)
+        .then(() => {
+          if (currentMediaIndex >= mediaItems.length - 1) {
+            setCurrentMediaIndex(Math.max(0, mediaItems.length - 2));
+          }
+        })
+        .catch(error => {
+          console.error('Delete media failed:', error);
+          alert(`删除媒体失败: ${error.message}`);
+        });
     }
   };
 
@@ -356,6 +376,11 @@ const MediaPage: React.FC = () => {
                 <div className="flex items-center space-x-1 text-green-400">
                   <Wifi className="h-4 w-4" />
                   <span className="text-xs">已连接</span>
+                </div>
+              ) : connectionStatus === 'checking' ? (
+                <div className="flex items-center space-x-1 text-yellow-400">
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  <span className="text-xs">连接中...</span>
                 </div>
               ) : (
                 <div className="flex items-center space-x-1 text-red-400">

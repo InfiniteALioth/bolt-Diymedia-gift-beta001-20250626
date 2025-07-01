@@ -13,6 +13,7 @@ export function useAuth() {
   const [deviceId] = useLocalStorage<string>('deviceId', generateDeviceId());
   const [isLoading, setIsLoading] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking');
+  const [lastError, setLastError] = useState<string | null>(null);
 
   function generateDeviceId(): string {
     return 'device_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
@@ -22,24 +23,53 @@ export function useAuth() {
   const checkConnection = useCallback(async () => {
     if (USE_MOCK_API) {
       setConnectionStatus('connected');
-      return;
+      return true;
     }
 
+    setConnectionStatus('checking');
     try {
-      const health = await apiService.healthCheck();
-      setConnectionStatus(health.connected ? 'connected' : 'disconnected');
+      const isConnected = await apiService.checkConnection();
+      setConnectionStatus(isConnected ? 'connected' : 'disconnected');
+      setLastError(null);
+      return isConnected;
     } catch (error) {
+      console.error('连接检查失败:', error);
       setConnectionStatus('disconnected');
+      setLastError(error instanceof Error ? error.message : '连接检查失败');
+      return false;
     }
   }, []);
 
   // 初始化时检查连接
   useEffect(() => {
     checkConnection();
-  }, [checkConnection]);
+    
+    // 设置定期检查
+    const interval = setInterval(() => {
+      if (connectionStatus !== 'connected') {
+        checkConnection();
+      }
+    }, 30000); // 每30秒检查一次
+    
+    return () => clearInterval(interval);
+  }, [checkConnection, connectionStatus]);
+
+  // 监听API服务的连接状态变化
+  useEffect(() => {
+    const unsubscribe = apiService.onConnectionStatusChange((status) => {
+      setConnectionStatus(
+        status === 'connected' ? 'connected' :
+        status === 'checking' ? 'checking' : 'disconnected'
+      );
+    });
+    
+    return unsubscribe;
+  }, []);
 
   const createUser = useCallback(async (username: string): Promise<User> => {
     setIsLoading(true);
+    setLastError(null);
+    
     try {
       const api = USE_MOCK_API ? mockApiService : apiService;
       const newUser = await api.registerUser(username, deviceId);
@@ -49,7 +79,13 @@ export function useAuth() {
       console.error('Create user failed:', error);
       
       // 提供更友好的错误信息
-      if (error.message.includes('无法连接到服务器')) {
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : '创建用户失败，请重试';
+      
+      setLastError(errorMessage);
+      
+      if (errorMessage.includes('无法连接到服务器')) {
         throw new Error('无法连接到服务器，请检查网络连接或联系管理员');
       }
       
@@ -63,16 +99,26 @@ export function useAuth() {
     if (!user) return;
     
     setIsLoading(true);
+    setLastError(null);
+    
     try {
       if (USE_MOCK_API) {
         const updatedUser = { ...user, username: newUsername.trim() };
         setUser(updatedUser);
+        return updatedUser;
       } else {
         const updatedUser = await apiService.updateUserProfile({ username: newUsername.trim() });
         setUser(updatedUser);
+        return updatedUser;
       }
     } catch (error) {
       console.error('Update username failed:', error);
+      
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : '更新用户名失败，请重试';
+      
+      setLastError(errorMessage);
       throw error;
     } finally {
       setIsLoading(false);
@@ -81,6 +127,8 @@ export function useAuth() {
 
   const loginAdmin = useCallback(async (username: string, password: string): Promise<boolean> => {
     setIsLoading(true);
+    setLastError(null);
+    
     try {
       const api = USE_MOCK_API ? mockApiService : apiService;
       const adminUser = await api.loginAdmin(username, password);
@@ -89,8 +137,14 @@ export function useAuth() {
     } catch (error) {
       console.error('Admin login failed:', error);
       
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : '管理员登录失败，请重试';
+      
+      setLastError(errorMessage);
+      
       // 提供更友好的错误信息
-      if (error.message.includes('无法连接到服务器')) {
+      if (errorMessage.includes('无法连接到服务器')) {
         throw new Error('无法连接到服务器，请检查网络连接');
       }
       
@@ -102,6 +156,8 @@ export function useAuth() {
 
   const logout = useCallback(async () => {
     setIsLoading(true);
+    setLastError(null);
+    
     try {
       if (!USE_MOCK_API) {
         await apiService.logout();
@@ -110,6 +166,13 @@ export function useAuth() {
       setAdmin(null);
     } catch (error) {
       console.error('Logout failed:', error);
+      
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : '登出失败，请重试';
+      
+      setLastError(errorMessage);
+      
       // 即使登出失败也要清除本地状态
       setUser(null);
       setAdmin(null);
@@ -124,6 +187,7 @@ export function useAuth() {
     deviceId,
     isLoading,
     connectionStatus,
+    lastError,
     createUser,
     updateUsername,
     loginAdmin,

@@ -12,40 +12,73 @@ export function useMediaStorage(pageId: string) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const [lastLoadTime, setLastLoadTime] = useState<Date | null>(null);
 
   // 加载数据
-  useEffect(() => {
-    const loadData = async () => {
-      if (!pageId) return;
-      
+  const loadData = useCallback(async (showLoading = true) => {
+    if (!pageId) return;
+    
+    if (showLoading) {
       setIsLoading(true);
-      setError(null);
+    }
+    setError(null);
+    
+    try {
+      const api = USE_MOCK_API ? mockApiService : apiService;
       
-      try {
-        const api = USE_MOCK_API ? mockApiService : apiService;
-        
-        const [items, messages] = await Promise.all([
-          api.getMediaItems(pageId),
-          api.getChatMessages(pageId)
-        ]);
+      const [items, messages] = await Promise.all([
+        api.getMediaItems(pageId),
+        api.getChatMessages(pageId)
+      ]);
 
-        setMediaItems(items);
-        setChatMessages(messages);
-      } catch (error) {
-        console.error('Failed to load data:', error);
-        setError(error.message || '数据加载失败');
-        
-        // 使用空数据作为回退
+      setMediaItems(items);
+      setChatMessages(messages);
+      setLastLoadTime(new Date());
+      setRetryCount(0);
+    } catch (error) {
+      console.error('Failed to load data:', error);
+      
+      // 提供更友好的错误消息
+      let errorMessage = '数据加载失败';
+      if (error instanceof Error) {
+        if (error.message.includes('fetch')) {
+          errorMessage = '无法连接到服务器，请检查网络连接';
+        } else if (error.message.includes('timeout')) {
+          errorMessage = '服务器响应超时，请稍后再试';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      setError(errorMessage);
+      setRetryCount(prev => prev + 1);
+      
+      // 使用空数据作为回退
+      if (!isLoaded) {
         setMediaItems([]);
         setChatMessages([]);
-      } finally {
-        setIsLoaded(true);
-        setIsLoading(false);
       }
-    };
-
-    loadData();
+    } finally {
+      setIsLoaded(true);
+      setIsLoading(false);
+    }
   }, [pageId]);
+
+  // 初始加载数据
+  useEffect(() => {
+    loadData();
+    
+    // 设置定期刷新
+    const refreshInterval = setInterval(() => {
+      // 只有在已经成功加载过数据的情况下才自动刷新
+      if (isLoaded && !error) {
+        loadData(false); // 不显示加载状态，静默刷新
+      }
+    }, 60000); // 每分钟刷新一次
+    
+    return () => clearInterval(refreshInterval);
+  }, [loadData, isLoaded, error]);
 
   // 添加媒体项
   const addMediaItems = useCallback(async (
@@ -71,10 +104,26 @@ export function useMediaStorage(pageId: string) {
       
       setMediaItems(prev => [...itemsWithUploader, ...prev]);
       console.log('Successfully added', newItems.length, 'media items');
+      return newItems;
     } catch (error) {
       console.error('Failed to add media items:', error);
-      setError(error.message || '媒体上传失败');
-      throw error;
+      
+      // 提供更友好的错误消息
+      let errorMessage = '媒体上传失败';
+      if (error instanceof Error) {
+        if (error.message.includes('fetch')) {
+          errorMessage = '无法连接到服务器，请检查网络连接';
+        } else if (error.message.includes('timeout')) {
+          errorMessage = '上传超时，请稍后再试';
+        } else if (error.message.includes('size')) {
+          errorMessage = '文件大小超出限制';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      setError(errorMessage);
+      throw new Error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -94,8 +143,19 @@ export function useMediaStorage(pageId: string) {
       console.log('Deleted media item:', itemId);
     } catch (error) {
       console.error('Failed to delete media item:', error);
-      setError(error.message || '媒体删除失败');
-      throw error;
+      
+      // 提供更友好的错误消息
+      let errorMessage = '媒体删除失败';
+      if (error instanceof Error) {
+        if (error.message.includes('fetch')) {
+          errorMessage = '无法连接到服务器，请检查网络连接';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      setError(errorMessage);
+      throw new Error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -118,10 +178,34 @@ export function useMediaStorage(pageId: string) {
       };
       
       setChatMessages(prev => [...prev, messageWithUser]);
+      return messageWithUser;
     } catch (error) {
       console.error('Failed to send message:', error);
-      setError(error.message || '消息发送失败');
-      throw error;
+      
+      // 提供更友好的错误消息
+      let errorMessage = '消息发送失败';
+      if (error instanceof Error) {
+        if (error.message.includes('fetch')) {
+          errorMessage = '无法连接到服务器，请检查网络连接';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      setError(errorMessage);
+      
+      // 在离线模式下，仍然添加消息到本地（标记为本地消息）
+      if (USE_MOCK_API || error.toString().includes('fetch')) {
+        const offlineMessage = {
+          ...message,
+          id: message.id || `local_${Date.now()}`,
+          isLocal: true
+        };
+        setChatMessages(prev => [...prev, offlineMessage]);
+        return offlineMessage;
+      }
+      
+      throw new Error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -138,33 +222,8 @@ export function useMediaStorage(pageId: string) {
   // 重新加载数据
   const reloadData = useCallback(async () => {
     setIsLoaded(false);
-    const loadData = async () => {
-      if (!pageId) return;
-      
-      setIsLoading(true);
-      setError(null);
-      
-      try {
-        const api = USE_MOCK_API ? mockApiService : apiService;
-        
-        const [items, messages] = await Promise.all([
-          api.getMediaItems(pageId),
-          api.getChatMessages(pageId)
-        ]);
-
-        setMediaItems(items);
-        setChatMessages(messages);
-      } catch (error) {
-        console.error('Failed to reload data:', error);
-        setError(error.message || '数据重新加载失败');
-      } finally {
-        setIsLoaded(true);
-        setIsLoading(false);
-      }
-    };
-
     await loadData();
-  }, [pageId]);
+  }, [loadData]);
 
   return {
     mediaItems,
@@ -172,6 +231,8 @@ export function useMediaStorage(pageId: string) {
     isLoaded,
     isLoading,
     error,
+    retryCount,
+    lastLoadTime,
     addMediaItems,
     removeMediaItem,
     addChatMessage,
