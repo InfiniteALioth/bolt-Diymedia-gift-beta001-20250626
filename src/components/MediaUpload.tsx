@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { Upload, X, Image, Video, Music, ChevronRight } from 'lucide-react';
+import { Upload, X, Image, Video, Music, ChevronRight, HardDrive } from 'lucide-react';
 
 interface MediaUploadProps {
   uploaderName: string;
@@ -19,6 +19,18 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
 
   const captionByteLength = new TextEncoder().encode(caption).length;
   const isCaptionValid = captionByteLength <= 120;
+
+  // 模拟剩余存储空间数据
+  const totalStorage = 1024; // 1GB = 1024MB
+  const usedStorage = 256; // 假设已使用256MB
+  const remainingStorage = totalStorage - usedStorage;
+
+  // 文件大小限制（MB）
+  const fileSizeLimits = {
+    image: 50, // 50MB
+    video: 500, // 500MB
+    audio: 100, // 100MB
+  };
 
   const acceptedTypes = {
     image: 'image/*',
@@ -53,6 +65,20 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
     const typeCount = [hasImages, hasVideos, hasAudios].filter(Boolean).length;
 
     if (typeCount > 1) return '每次只能上传同一类型的媒体';
+
+    // 检查文件大小
+    for (const file of files) {
+      const fileSizeMB = file.size / (1024 * 1024);
+      if (file.type.startsWith('image/') && fileSizeMB > fileSizeLimits.image) {
+        return `图片文件 "${file.name}" 超过 ${fileSizeLimits.image}MB 限制`;
+      }
+      if (file.type.startsWith('video/') && fileSizeMB > fileSizeLimits.video) {
+        return `视频文件 "${file.name}" 超过 ${fileSizeLimits.video}MB 限制`;
+      }
+      if (file.type.startsWith('audio/') && fileSizeMB > fileSizeLimits.audio) {
+        return `音频文件 "${file.name}" 超过 ${fileSizeLimits.audio}MB 限制`;
+      }
+    }
 
     return null;
   };
@@ -174,24 +200,53 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
               </label>
             </div>
 
+            {/* 更新后的文件类型说明 */}
             <div className="mt-6 space-y-3">
               <div className="flex items-center space-x-3 text-sm text-gray-600">
-                <Image className="h-4 w-4" />
-                <span>图片：最多3张，支持 JPG、PNG、GIF 等格式</span>
+                <Image className="h-4 w-4 text-blue-500" />
+                <span>图片: 每次1-3张 (JPG、PNG、GIF)</span>
               </div>
               <div className="flex items-center space-x-3 text-sm text-gray-600">
-                <Video className="h-4 w-4" />
-                <span>视频：1个，支持 MP4、WebM、MOV 等格式</span>
+                <Video className="h-4 w-4 text-purple-500" />
+                <span>视频: 每次1个 (MP4、WebM、MOV)</span>
               </div>
               <div className="flex items-center space-x-3 text-sm text-gray-600">
-                <Music className="h-4 w-4" />
-                <span>音频：1个，支持 MP3、WAV、OGG 等格式</span>
+                <Music className="h-4 w-4 text-green-500" />
+                <span>音频: 每次1个 (MP3、WAV、OGG)</span>
               </div>
-              <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                <p className="text-xs text-green-800">
-                  <strong>无大小限制：</strong>您可以上传任意大小的媒体文件。文件将保存在浏览器本地存储中，较大的文件可能需要更长的处理时间。
-                </p>
+            </div>
+
+            {/* 媒体大小限制说明 */}
+            <div className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+              <h4 className="text-sm font-medium text-orange-800 mb-2">媒体大小限制</h4>
+              <p className="text-xs text-orange-700 leading-relaxed">
+                您每次可以上传 <strong>{fileSizeLimits.image}MB</strong> 大小的图片文件、
+                <strong>{fileSizeLimits.video}MB</strong> 大小的视频文件、
+                <strong>{fileSizeLimits.audio}MB</strong> 大小的音频文件，
+                较大的文件需要较长的处理时间。
+              </p>
+            </div>
+
+            {/* 剩余空间显示 */}
+            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center space-x-2">
+                  <HardDrive className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm font-medium text-blue-800">剩余空间</span>
+                </div>
+                <span className="text-sm font-bold text-blue-800">
+                  {remainingStorage}MB / {totalStorage}MB
+                </span>
               </div>
+              <div className="w-full bg-blue-200 rounded-full h-2">
+                <div 
+                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${((totalStorage - remainingStorage) / totalStorage) * 100}%` }}
+                />
+              </div>
+              <p className="text-xs text-blue-600 mt-1">
+                基于现有存储数据计算，实际可用空间可能有所差异
+              </p>
             </div>
           </div>
         </div>

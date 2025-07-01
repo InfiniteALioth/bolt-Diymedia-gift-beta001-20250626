@@ -266,22 +266,58 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
         )}
       </div>
 
-      {/* Media Info Overlay */}
-      <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/60 to-transparent p-6 pt-20">
-        <div className="text-center text-white px-4">
-          <p className="text-lg font-medium">
-            {currentMedia.caption && `"${currentMedia.caption}" - `}
-            由 {currentMedia.uploaderName} 上传
-          </p>
+      {/* Media Info Overlay - 修正后的布局逻辑 */}
+      <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/70 via-black/40 to-transparent p-6 pt-20">
+        <div className="max-w-4xl mx-auto px-4">
+          {/* 有说明文字时：显示 "说明文字 — 由 上传者名称 上传" */}
+          {currentMedia.caption && currentMedia.caption.trim() && (
+            <div 
+              className="bg-black/30 backdrop-blur-sm rounded-2xl border border-white/10"
+              style={{ padding: '0.5px' }}
+            >
+              <div className="text-center">
+                <div 
+                  className="text-white text-lg leading-relaxed"
+                  style={{
+                    wordWrap: 'break-word',
+                    overflowWrap: 'break-word',
+                    hyphens: 'auto',
+                    whiteSpace: 'pre-wrap', // 保留换行符和空格
+                    lineHeight: '1.6'
+                  }}
+                >
+                  {currentMedia.caption}
+                  <span className="text-white/70 mx-2">—</span>
+                  <span className="text-white/70">由 </span>
+                  <span className="text-blue-300 font-medium">{currentMedia.uploaderName}</span>
+                  <span className="text-white/70"> 上传</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 如果没有说明文字，只显示上传者信息 */}
+          {(!currentMedia.caption || !currentMedia.caption.trim()) && (
+            <div 
+              className="bg-black/20 backdrop-blur-sm rounded-2xl border border-white/5"
+              style={{ padding: '0.5px' }}
+            >
+              <div className="text-center">
+                <p className="text-white/70 text-lg">
+                  由 <span className="text-blue-300 font-medium">{currentMedia.uploaderName}</span> 上传
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Auto-play Toggle Button - 重新设计 */}
+      {/* Auto-play Toggle Button - 调整尺寸 */}
       <div className="absolute top-4 left-4 z-50">
         <button
           onClick={toggleAutoPlay}
           className={`
-            flex items-center space-x-2 px-4 py-2 rounded-full text-sm font-medium 
+            flex items-center space-x-2 px-3 py-1 rounded-full text-sm font-medium 
             transition-all duration-300 transform hover:scale-105 active:scale-95
             shadow-lg hover:shadow-xl backdrop-blur-sm
             ${autoPlay 
@@ -290,7 +326,7 @@ const MediaDisplay: React.FC<MediaDisplayProps> = ({
             }
           `}
           style={{
-            minWidth: '120px',
+            minWidth: '90px',
             cursor: 'pointer'
           }}
         >

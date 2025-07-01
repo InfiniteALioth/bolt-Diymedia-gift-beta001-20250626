@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Shield, Eye, EyeOff } from 'lucide-react';
+import { Shield, Eye, EyeOff, Home } from 'lucide-react';
 
 interface AdminLoginProps {
   onLogin: (username: string, password: string) => boolean;
@@ -34,10 +34,25 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLogin }) => {
     }, 1000);
   };
 
+  const handleBackToHome = () => {
+    window.location.href = '/';
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
       <div className="max-w-md w-full">
         <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-8 border border-white/20">
+          {/* 返回首页按钮 */}
+          <div className="flex justify-between items-center mb-6">
+            <button
+              onClick={handleBackToHome}
+              className="flex items-center space-x-2 text-white/70 hover:text-white transition-colors duration-200"
+            >
+              <Home className="h-4 w-4" />
+              <span className="text-sm">返回首页</span>
+            </button>
+          </div>
+
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-600 rounded-full mb-4">
               <Shield className="h-8 w-8 text-white" />
@@ -58,6 +73,7 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLogin }) => {
                 onChange={(e) => setCredentials(prev => ({ ...prev, username: e.target.value }))}
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
                 placeholder="请输入管理员用户名"
+                autoComplete="username"
               />
             </div>
 
@@ -73,6 +89,7 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLogin }) => {
                   onChange={(e) => setCredentials(prev => ({ ...prev, password: e.target.value }))}
                   className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 pr-12"
                   placeholder="请输入管理员密码"
+                  autoComplete="current-password"
                 />
                 <button
                   type="button"
@@ -108,6 +125,15 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLogin }) => {
             <p className="text-sm text-blue-300">
               用户名: superadmin<br />
               密码: admin123
+            </p>
+          </div>
+
+          {/* 调试信息 */}
+          <div className="mt-4 p-3 bg-gray-500/20 border border-gray-500/30 rounded-lg">
+            <h4 className="text-xs font-medium text-gray-300 mb-1">调试信息</h4>
+            <p className="text-xs text-gray-400">
+              当前URL: {window.location.href}<br />
+              路径: {window.location.pathname}
             </p>
           </div>
         </div>
