@@ -14,6 +14,7 @@ import { logger } from '@/utils/logger';
 import { errorHandler } from '@/middleware/errorHandler';
 import { rateLimiter } from '@/middleware/rateLimiter';
 import { authMiddleware } from '@/middleware/auth';
+import { sanitizeInput } from '@/middleware/validation';
 
 // Import routes
 import authRoutes from '@/routes/auth';
@@ -59,6 +60,9 @@ app.use(morgan('combined', { stream: { write: (message) => logger.info(message.t
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Input sanitization
+app.use(sanitizeInput);
+
 // Rate limiting
 app.use(rateLimiter);
 
@@ -68,7 +72,8 @@ app.get('/health', (req, res) => {
     status: 'OK',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
-    environment: process.env.NODE_ENV
+    environment: process.env.NODE_ENV,
+    version: process.env.npm_package_version || '1.0.0'
   });
 });
 
@@ -87,7 +92,8 @@ app.use('*', (req, res) => {
   res.status(404).json({
     success: false,
     message: 'API endpoint not found',
-    path: req.originalUrl
+    path: req.originalUrl,
+    timestamp: new Date().toISOString()
   });
 });
 

@@ -26,6 +26,7 @@ export const validate = (validations: ValidationChain[]) => {
       success: false,
       message: 'Validation failed',
       errors: extractedErrors,
+      timestamp: new Date().toISOString(),
     });
   };
 };
