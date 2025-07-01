@@ -1,8 +1,27 @@
-// 前端 API 服务 - 连接后端接口或使用 Mock API
+// 前端 API 服务 - 连接后端接口
 import { User, MediaItem, ChatMessage, MediaPage, Admin } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1';
-const USE_MOCK_API = import.meta.env.VITE_USE_MOCK_API === 'true' || !import.meta.env.VITE_API_URL;
+const USE_MOCK_API = import.meta.env.VITE_USE_MOCK_API === 'true';
+const DEBUG_MODE = import.meta.env.VITE_DEBUG_MODE === 'true';
+const SHOW_API_LOGS = import.meta.env.VITE_SHOW_API_LOGS === 'true';
+
+// API日志记录
+const logApiCall = (method: string, url: string, data?: any) => {
+  if (SHOW_API_LOGS) {
+    console.log(`🌐 API ${method.toUpperCase()}: ${url}`, data ? { data } : '');
+  }
+};
+
+const logApiResponse = (method: string, url: string, response: any, error?: any) => {
+  if (SHOW_API_LOGS) {
+    if (error) {
+      console.error(`❌ API ${method.toUpperCase()} ERROR: ${url}`, error);
+    } else {
+      console.log(`✅ API ${method.toUpperCase()} SUCCESS: ${url}`, response);
+    }
+  }
+};
 
 class ApiService {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -25,19 +44,48 @@ class ApiService {
       };
     }
 
+    logApiCall(options.method || 'GET', endpoint, options.body ? JSON.parse(options.body as string) : undefined);
+
     try {
       const response = await fetch(url, config);
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        const error = new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        logApiResponse(options.method || 'GET', endpoint, null, error);
+        throw error;
       }
       
       const data = await response.json();
-      return data.data || data;
+      const result = data.data || data;
+      
+      logApiResponse(options.method || 'GET', endpoint, result);
+      return result;
     } catch (error) {
-      console.error('API request failed:', error);
+      logApiResponse(options.method || 'GET', endpoint, null, error);
+      
+      // 网络错误处理
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        throw new Error('无法连接到服务器，请检查网络连接或确保后端服务正在运行');
+      }
+      
       throw error;
+    }
+  }
+
+  // 健康检查
+  async healthCheck(): Promise<any> {
+    try {
+      const response = await fetch(`${API_BASE_URL.replace('/api/v1', '')}/health`);
+      const data = await response.json();
+      return { ...data, connected: true };
+    } catch (error) {
+      return { 
+        status: 'error', 
+        message: 'Backend not available',
+        connected: false,
+        error: error.message 
+      };
     }
   }
 
@@ -126,21 +174,34 @@ class ApiService {
     formData.append('caption', caption);
 
     const token = localStorage.getItem('authToken');
-    const response = await fetch(`${API_BASE_URL}/media/${pageId}`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-      body: formData,
-    });
+    
+    logApiCall('POST', `/media/${pageId}`, { filesCount: files.length, caption });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    try {
+      const response = await fetch(`${API_BASE_URL}/media/${pageId}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const error = new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        logApiResponse('POST', `/media/${pageId}`, null, error);
+        throw error;
+      }
+
+      const data = await response.json();
+      const result = data.data?.mediaItems || data.mediaItems || [];
+      
+      logApiResponse('POST', `/media/${pageId}`, result);
+      return result;
+    } catch (error) {
+      logApiResponse('POST', `/media/${pageId}`, null, error);
+      throw error;
     }
-
-    const data = await response.json();
-    return data.data?.mediaItems || data.mediaItems || [];
   }
 
   async deleteMedia(mediaId: string): Promise<void> {
@@ -243,21 +304,34 @@ class ApiService {
     formData.append('file', file);
 
     const token = localStorage.getItem('authToken');
-    const response = await fetch(`${API_BASE_URL}/upload/single`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-      body: formData,
-    });
+    
+    logApiCall('POST', '/upload/single', { fileName: file.name, fileSize: file.size });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    try {
+      const response = await fetch(`${API_BASE_URL}/upload/single`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const error = new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        logApiResponse('POST', '/upload/single', null, error);
+        throw error;
+      }
+
+      const data = await response.json();
+      const result = data.data?.file || data.file;
+      
+      logApiResponse('POST', '/upload/single', result);
+      return result;
+    } catch (error) {
+      logApiResponse('POST', '/upload/single', null, error);
+      throw error;
     }
-
-    const data = await response.json();
-    return data.data?.file || data.file;
   }
 
   async uploadMultiple(files: File[]): Promise<any[]> {
@@ -265,21 +339,34 @@ class ApiService {
     files.forEach(file => formData.append('files', file));
 
     const token = localStorage.getItem('authToken');
-    const response = await fetch(`${API_BASE_URL}/upload/multiple`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-      body: formData,
-    });
+    
+    logApiCall('POST', '/upload/multiple', { filesCount: files.length });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    try {
+      const response = await fetch(`${API_BASE_URL}/upload/multiple`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const error = new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        logApiResponse('POST', '/upload/multiple', null, error);
+        throw error;
+      }
+
+      const data = await response.json();
+      const result = data.data?.files || data.files || [];
+      
+      logApiResponse('POST', '/upload/multiple', result);
+      return result;
+    } catch (error) {
+      logApiResponse('POST', '/upload/multiple', null, error);
+      throw error;
     }
-
-    const data = await response.json();
-    return data.data?.files || data.files || [];
   }
 
   async logout(): Promise<void> {
@@ -291,13 +378,14 @@ class ApiService {
       localStorage.removeItem('authToken');
     }
   }
-
-  // 健康检查
-  async healthCheck(): Promise<any> {
-    return fetch(`${API_BASE_URL.replace('/api/v1', '')}/health`)
-      .then(res => res.json())
-      .catch(() => ({ status: 'error', message: 'Backend not available' }));
-  }
 }
 
 export const apiService = new ApiService();
+
+// 导出调试信息
+if (DEBUG_MODE) {
+  (window as any).apiService = apiService;
+  console.log('🔧 Debug mode enabled. API service available as window.apiService');
+  console.log('🌐 API Base URL:', API_BASE_URL);
+  console.log('🎭 Mock API Mode:', USE_MOCK_API);
+}

@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { Upload, X, Image, Video, Music, ChevronRight, HardDrive } from 'lucide-react';
+import { Upload, X, Image, Video, Music, ChevronRight, HardDrive, AlertCircle } from 'lucide-react';
 
 interface MediaUploadProps {
   uploaderName: string;
@@ -16,6 +16,8 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
   const [caption, setCaption] = useState('');
   const [currentStep, setCurrentStep] = useState<'select' | 'edit'>('select');
   const [dragOver, setDragOver] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const captionByteLength = new TextEncoder().encode(caption).length;
   const isCaptionValid = captionByteLength <= 120;
@@ -80,6 +82,12 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
       }
     }
 
+    // 检查总文件大小是否超过剩余空间
+    const totalSizeMB = files.reduce((sum, file) => sum + file.size / (1024 * 1024), 0);
+    if (totalSizeMB > remainingStorage) {
+      return `文件总大小 ${totalSizeMB.toFixed(1)}MB 超过剩余空间 ${remainingStorage}MB`;
+    }
+
     return null;
   };
 
@@ -98,7 +106,8 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
 
     setSelectedFiles(fileArray);
     setCurrentStep('edit');
-  }, []);
+    setUploadError(null);
+  }, [remainingStorage]);
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -126,10 +135,22 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
     handleFileSelect(files);
   }, [handleFileSelect]);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (selectedFiles.length > 0 && isCaptionValid) {
-      console.log('提交上传:', selectedFiles.length, '个文件，说明:', caption);
-      onUpload(selectedFiles, caption);
+      setIsUploading(true);
+      setUploadError(null);
+      
+      try {
+        console.log('提交上传:', selectedFiles.length, '个文件，说明:', caption);
+        await onUpload(selectedFiles, caption);
+      } catch (error: any) {
+        console.error('上传失败:', error);
+        setUploadError(error.message || '上传失败，请重试');
+        setIsUploading(false);
+        return;
+      }
+      
+      setIsUploading(false);
     }
   };
 
@@ -262,11 +283,22 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
             <h2 className="text-xl font-bold text-gray-900">编辑媒体信息</h2>
             <button
               onClick={onClose}
-              className="w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors duration-200"
+              disabled={isUploading}
+              className="w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors duration-200 disabled:opacity-50"
             >
               <X className="h-5 w-5" />
             </button>
           </div>
+
+          {/* 上传错误提示 */}
+          {uploadError && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-center space-x-2">
+                <AlertCircle className="h-5 w-5 text-red-600" />
+                <p className="text-sm text-red-800">{uploadError}</p>
+              </div>
+            </div>
+          )}
 
           {/* Selected Files */}
           <div className="mb-6">
@@ -287,7 +319,8 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
                   </div>
                   <button
                     onClick={() => removeFile(index)}
-                    className="w-6 h-6 bg-red-100 hover:bg-red-200 rounded-full flex items-center justify-center text-red-600 transition-colors duration-200"
+                    disabled={isUploading}
+                    className="w-6 h-6 bg-red-100 hover:bg-red-200 rounded-full flex items-center justify-center text-red-600 transition-colors duration-200 disabled:opacity-50"
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -301,7 +334,7 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
                 <strong>总大小：</strong>{formatFileSize(selectedFiles.reduce((sum, file) => sum + file.size, 0))}
               </p>
               <p className="text-xs text-blue-600 mt-1">
-                文件将转换为 Base64 格式保存，处理时间取决于文件大小
+                文件将上传到服务器进行处理和存储
               </p>
             </div>
           </div>
@@ -329,7 +362,8 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
               onChange={(e) => setCaption(e.target.value)}
               placeholder="分享您的想法..."
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              disabled={isUploading}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none disabled:opacity-50"
             />
             <div className="mt-1 flex justify-between text-sm">
               <span className={captionByteLength > 120 ? 'text-red-500' : 'text-gray-500'}>
@@ -345,21 +379,31 @@ const MediaUpload: React.FC<MediaUploadProps> = ({
           <div className="flex justify-between">
             <button
               onClick={() => setCurrentStep('select')}
-              className="px-6 py-3 text-gray-600 hover:text-gray-800 transition-colors duration-200"
+              disabled={isUploading}
+              className="px-6 py-3 text-gray-600 hover:text-gray-800 transition-colors duration-200 disabled:opacity-50"
             >
               返回选择
             </button>
             <button
               onClick={handleSubmit}
-              disabled={selectedFiles.length === 0 || !isCaptionValid}
+              disabled={selectedFiles.length === 0 || !isCaptionValid || isUploading}
               className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 flex items-center space-x-2 ${
-                selectedFiles.length > 0 && isCaptionValid
+                selectedFiles.length > 0 && isCaptionValid && !isUploading
                   ? 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white shadow-lg hover:shadow-xl'
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
             >
-              <span>发布</span>
-              <ChevronRight className="h-5 w-5" />
+              {isUploading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>上传中...</span>
+                </>
+              ) : (
+                <>
+                  <span>发布</span>
+                  <ChevronRight className="h-5 w-5" />
+                </>
+              )}
             </button>
           </div>
         </div>

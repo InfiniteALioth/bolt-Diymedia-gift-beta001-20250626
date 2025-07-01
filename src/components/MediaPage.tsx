@@ -11,14 +11,14 @@ import ChatPanel from './ChatPanel';
 import MediaUpload from './MediaUpload';
 import UserSetup from './UserSetup';
 import UserInfoModal from './UserInfoModal';
-import { User, ChevronDown, AlertCircle, Home, Settings } from 'lucide-react';
+import { User, ChevronDown, AlertCircle, Home, Settings, Wifi, WifiOff, RefreshCw } from 'lucide-react';
 
 // 开发模式开关
 const USE_MOCK_API = import.meta.env.VITE_USE_MOCK_API === 'true' || !import.meta.env.VITE_API_URL;
 
 const MediaPage: React.FC = () => {
   const { pageId } = useParams<{ pageId: string }>();
-  const { user, createUser, updateUsername } = useAuth();
+  const { user, createUser, updateUsername, connectionStatus, checkConnection } = useAuth();
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
   const [showUpload, setShowUpload] = useState(false);
   const [showUserEdit, setShowUserEdit] = useState(false);
@@ -26,13 +26,29 @@ const MediaPage: React.FC = () => {
   const [autoPlay, setAutoPlay] = useState(true);
   const [pageNotFound, setPageNotFound] = useState(false);
   const [pageData, setPageData] = useState<MediaPageType | null>(null);
+  const [isLoadingPage, setIsLoadingPage] = useState(true);
 
   // 确定当前页面ID
   const currentPageId = pageId || 'page_demo';
 
+  // 使用媒体存储钩子
+  const {
+    mediaItems,
+    chatMessages,
+    isLoaded,
+    isLoading,
+    error,
+    addMediaItems,
+    removeMediaItem,
+    addChatMessage,
+    clearAllData,
+    reloadData
+  } = useMediaStorage(currentPageId);
+
   // 验证页面是否存在
   useEffect(() => {
     const loadPageData = async () => {
+      setIsLoadingPage(true);
       try {
         const api = USE_MOCK_API ? mockApiService : apiService;
         let foundPage: MediaPageType | null = null;
@@ -93,22 +109,13 @@ const MediaPage: React.FC = () => {
       } catch (error) {
         console.error('Failed to load page data:', error);
         setPageNotFound(true);
+      } finally {
+        setIsLoadingPage(false);
       }
     };
 
     loadPageData();
   }, [currentPageId]);
-
-  // 使用媒体存储钩子
-  const {
-    mediaItems,
-    chatMessages,
-    isLoaded,
-    addMediaItems,
-    removeMediaItem,
-    addChatMessage,
-    clearAllData
-  } = useMediaStorage(currentPageId);
 
   // 模拟剩余时间和存储数据
   const [remainingTime, setRemainingTime] = useState(1440); // 24小时 = 1440分钟
@@ -129,6 +136,69 @@ const MediaPage: React.FC = () => {
   // Handle first-time user setup
   if (!user) {
     return <UserSetup onComplete={createUser} />;
+  }
+
+  // 连接状态检查
+  if (!USE_MOCK_API && connectionStatus === 'disconnected') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-red-50 flex items-center justify-center p-4">
+        <div className="max-w-md w-full text-center">
+          <div className="bg-white rounded-2xl shadow-xl p-8 border border-red-200">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <WifiOff className="h-8 w-8 text-red-600" />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">无法连接到服务器</h1>
+            <p className="text-gray-600 mb-6">
+              请检查网络连接或确保后端服务正在运行。
+            </p>
+            <div className="space-y-3">
+              <button
+                onClick={checkConnection}
+                className="w-full flex items-center justify-center space-x-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+              >
+                <RefreshCw className="h-5 w-5" />
+                <span>重新连接</span>
+              </button>
+              <button
+                onClick={() => window.location.href = '/admin'}
+                className="w-full flex items-center justify-center space-x-2 px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all duration-200"
+              >
+                <Settings className="h-5 w-5" />
+                <span>管理后台</span>
+              </button>
+            </div>
+            <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <h4 className="text-sm font-medium text-blue-800 mb-2">开发者信息</h4>
+              <p className="text-xs text-blue-700">
+                API地址: {import.meta.env.VITE_API_URL}<br/>
+                请确保后端服务在 http://localhost:3001 运行
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 页面加载中
+  if (isLoadingPage) {
+    return (
+      <div className="w-full h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-center text-white p-4">
+          <div className="w-16 h-16 bg-white bg-opacity-10 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+            <User className="h-8 w-8" />
+          </div>
+          <h3 className="text-xl font-semibold mb-2">加载页面中...</h3>
+          <p className="text-gray-300 mb-4">正在验证页面信息</p>
+          {!USE_MOCK_API && (
+            <div className="flex items-center justify-center space-x-2 text-sm">
+              <Wifi className="h-4 w-4 text-green-400" />
+              <span className="text-green-400">已连接到后端</span>
+            </div>
+          )}
+        </div>
+      </div>
+    );
   }
 
   // 页面未找到
@@ -212,6 +282,17 @@ const MediaPage: React.FC = () => {
           </div>
           <h3 className="text-xl font-semibold mb-2">加载中...</h3>
           <p className="text-gray-300 mb-4">正在加载媒体内容</p>
+          {error && (
+            <div className="mt-4 p-3 bg-red-500/20 border border-red-500/30 rounded-lg">
+              <p className="text-red-300 text-sm">{error}</p>
+              <button
+                onClick={reloadData}
+                className="mt-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200"
+              >
+                重试
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -267,10 +348,27 @@ const MediaPage: React.FC = () => {
     <div className="w-full h-screen bg-black overflow-hidden relative">
       {/* Header */}
       <div className="absolute top-0 left-0 right-0 z-40 bg-gradient-to-b from-black/50 to-transparent">
-        <div className="flex items-center justify-end p-4">
+        <div className="flex items-center justify-between p-4">
+          {/* 连接状态指示器 */}
+          {!USE_MOCK_API && (
+            <div className="flex items-center space-x-2">
+              {connectionStatus === 'connected' ? (
+                <div className="flex items-center space-x-1 text-green-400">
+                  <Wifi className="h-4 w-4" />
+                  <span className="text-xs">已连接</span>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-1 text-red-400">
+                  <WifiOff className="h-4 w-4" />
+                  <span className="text-xs">连接中断</span>
+                </div>
+              )}
+            </div>
+          )}
+
           <button
             onClick={() => setShowUserInfo(true)}
-            className="flex items-center space-x-2 px-3 py-1 bg-white bg-opacity-20 backdrop-blur-sm rounded-full text-white hover:bg-opacity-30 transition-all duration-200 group"
+            className="flex items-center space-x-2 px-3 py-1 bg-white bg-opacity-20 backdrop-blur-sm rounded-full text-white hover:bg-opacity-30 transition-all duration-200 group ml-auto"
           >
             <div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
               <span className="text-white text-xs font-bold">
@@ -335,6 +433,19 @@ const MediaPage: React.FC = () => {
       {USE_MOCK_API && (
         <div className="fixed bottom-4 left-4 bg-yellow-500 text-black px-3 py-1 rounded-lg text-sm font-medium z-50">
           开发模式 (Mock API)
+        </div>
+      )}
+
+      {/* 错误提示 */}
+      {error && (
+        <div className="fixed top-20 left-4 right-4 bg-red-500/90 text-white px-4 py-3 rounded-lg text-sm z-50 flex items-center justify-between">
+          <span>{error}</span>
+          <button
+            onClick={reloadData}
+            className="ml-4 px-3 py-1 bg-white/20 rounded hover:bg-white/30 transition-colors duration-200"
+          >
+            重试
+          </button>
         </div>
       )}
     </div>
