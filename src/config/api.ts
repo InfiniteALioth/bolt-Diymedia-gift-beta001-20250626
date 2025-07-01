@@ -86,6 +86,13 @@ export const API_ENDPOINTS = {
     ADMINS: '/admin/admins'
   },
   
+  // 部署相关
+  DEPLOYMENT: {
+    HEALTH: '/deployment/health',
+    STATUS: '/deployment/status',
+    INFO: '/deployment/info'
+  },
+  
   // 健康检查
   HEALTH: '/health'
 };
@@ -94,7 +101,7 @@ export const API_ENDPOINTS = {
 export const ENV_CONFIG = {
   isDevelopment: import.meta.env.DEV,
   isProduction: import.meta.env.PROD,
-  useMockAPI: import.meta.env.VITE_USE_MOCK_API === 'true',
+  useMockApi: import.meta.env.VITE_USE_MOCK_API === 'true',
   showAPILogs: import.meta.env.VITE_SHOW_API_LOGS === 'true',
   debugMode: import.meta.env.VITE_DEBUG_MODE === 'true',
   appName: import.meta.env.VITE_APP_NAME || '互动媒体展示平台',
@@ -120,7 +127,7 @@ if (ENV_CONFIG.isDevelopment) {
   console.log('🔧 API Configuration loaded:');
   console.log('📡 Base URL:', API_CONFIG.BASE_URL);
   console.log('🔌 Socket URL:', API_CONFIG.SOCKET_URL);
-  console.log('🎭 Mock API:', ENV_CONFIG.useMockAPI);
+  console.log('🎭 Mock API:', ENV_CONFIG.useMockApi);
   console.log('📊 Debug Mode:', ENV_CONFIG.debugMode);
   console.log('📝 API Logs:', ENV_CONFIG.showAPILogs);
 }

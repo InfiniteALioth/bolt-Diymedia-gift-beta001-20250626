@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Wifi, WifiOff, AlertCircle, RefreshCw, Clock, Check } from 'lucide-react';
-import { apiService } from '../../services/api';
+import { Wifi, WifiOff, AlertCircle, RefreshCw, Clock, Check, Server } from 'lucide-react';
+import { apiService, deploymentApi } from '../../services/api';
 import { socketService } from '../../services/socket';
 
 type ConnectionStatus = 'checking' | 'connected' | 'disconnected' | 'error';
@@ -21,6 +21,7 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
   const [isExpanded, setIsExpanded] = useState(false);
   const [lastChecked, setLastChecked] = useState<Date>(new Date());
   const [retryCount, setRetryCount] = useState(0);
+  const [deploymentHealth, setDeploymentHealth] = useState<any>(null);
 
   // 检查是否使用模拟API
   const useMockApi = import.meta.env.VITE_USE_MOCK_API === 'true';
@@ -33,10 +34,31 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
     'bottom-right': 'bottom-4 right-4'
   };
 
+  // 检查部署健康状态
+  const checkDeploymentHealth = async () => {
+    try {
+      const health = await deploymentApi.checkHealth();
+      setDeploymentHealth(health);
+    } catch (error) {
+      console.error('Failed to check deployment health:', error);
+      setDeploymentHealth(null);
+    }
+  };
+
   useEffect(() => {
     // 如果使用模拟API，直接设置为已连接状态
     if (useMockApi) {
       setApiStatus('connected');
+      setDeploymentHealth({
+        status: 'OK',
+        service: 'mock-api',
+        timestamp: new Date().toISOString(),
+        health: {
+          database: true,
+          redis: true,
+          server: true
+        }
+      });
       return;
     }
     
@@ -47,11 +69,16 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
       
       if (status === 'connected') {
         setRetryCount(0);
+        // 连接成功后检查部署健康状态
+        checkDeploymentHealth();
       }
     });
 
     // 初始检查连接状态
     setApiStatus(apiService.getConnectionStatus());
+    if (apiService.getConnectionStatus() === 'connected') {
+      checkDeploymentHealth();
+    }
 
     // 定期检查连接状态
     const interval = setInterval(async () => {
@@ -96,6 +123,9 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
     
     setApiStatus('checking');
     await apiService.checkConnection();
+    if (apiStatus === 'connected') {
+      checkDeploymentHealth();
+    }
   };
 
   const getStatusIcon = () => {
@@ -226,6 +256,48 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
                     {socketStatus ? '已连接' : '未连接'}
                   </span>
                 </div>
+              </div>
+            )}
+
+            {/* 部署健康状态 */}
+            {deploymentHealth && (
+              <div className="border-t pt-2">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">部署状态:</span>
+                  <span className={`px-2 py-1 rounded text-xs ${
+                    deploymentHealth.status === 'OK' 
+                      ? 'bg-green-100 text-green-700' 
+                      : 'bg-red-100 text-red-700'
+                  }`}>
+                    {deploymentHealth.status === 'OK' ? '正常' : '异常'}
+                  </span>
+                </div>
+                <div className="flex items-center space-x-2 mt-1 text-gray-600">
+                  <Server className="h-3 w-3" />
+                  <span>{deploymentHealth.service || 'API服务'}</span>
+                </div>
+                {deploymentHealth.health && (
+                  <div className="grid grid-cols-3 gap-1 mt-2">
+                    <div className="flex items-center">
+                      <div className={`w-2 h-2 rounded-full mr-1 ${
+                        deploymentHealth.health.database ? 'bg-green-500' : 'bg-red-500'
+                      }`}></div>
+                      <span>数据库</span>
+                    </div>
+                    <div className="flex items-center">
+                      <div className={`w-2 h-2 rounded-full mr-1 ${
+                        deploymentHealth.health.server ? 'bg-green-500' : 'bg-red-500'
+                      }`}></div>
+                      <span>服务器</span>
+                    </div>
+                    <div className="flex items-center">
+                      <div className={`w-2 h-2 rounded-full mr-1 ${
+                        deploymentHealth.health.redis ? 'bg-green-500' : 'bg-red-500'
+                      }`}></div>
+                      <span>Redis</span>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

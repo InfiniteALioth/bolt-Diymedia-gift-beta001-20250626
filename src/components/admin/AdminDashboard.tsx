@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Admin, MediaPage } from '../../types';
-import { LayoutDashboard, Users, Settings, FileImage, BarChart3, LogOut, Plus } from 'lucide-react';
+import { LayoutDashboard, Users, Settings, FileImage, BarChart3, LogOut, Plus, Server } from 'lucide-react';
 import MediaPagesList from './MediaPagesList';
 import AdminsList from './AdminsList';
 import AnalyticsDashboard from './AnalyticsDashboard';
+import DeploymentStatus from './DeploymentStatus';
 
 interface AdminDashboardProps {
   admin: Admin;
@@ -11,12 +12,13 @@ interface AdminDashboardProps {
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ admin, onLogout }) => {
-  const [activeTab, setActiveTab] = useState<'pages' | 'admins' | 'analytics'>('pages');
+  const [activeTab, setActiveTab] = useState<'pages' | 'admins' | 'analytics' | 'deployment'>('pages');
 
   const menuItems = [
     { id: 'pages' as const, label: '媒体页管理', icon: FileImage },
     { id: 'admins' as const, label: '管理员管理', icon: Users },
     { id: 'analytics' as const, label: '数据分析', icon: BarChart3 },
+    { id: 'deployment' as const, label: '部署状态', icon: Server },
   ];
 
   return (
@@ -80,6 +82,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ admin, onLogout }) => {
             {activeTab === 'pages' && <MediaPagesList admin={admin} />}
             {activeTab === 'admins' && <AdminsList admin={admin} />}
             {activeTab === 'analytics' && <AnalyticsDashboard admin={admin} />}
+            {activeTab === 'deployment' && <DeploymentStatus />}
           </div>
         </div>
       </div>

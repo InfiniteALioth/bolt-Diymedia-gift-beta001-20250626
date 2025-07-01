@@ -106,7 +106,7 @@ class ApiService {
   // 连接检查
   public async checkConnection(): Promise<boolean> {
     // 如果使用Mock API，直接返回连接成功
-    if (ENV_CONFIG.useMockAPI) {
+    if (ENV_CONFIG.useMockApi) {
       console.log('Using Mock API mode - skipping real backend connection check');
       this.setConnectionStatus('connected');
       return true;
@@ -135,7 +135,7 @@ class ApiService {
       console.error('Connection check failed:', error);
       
       // 如果使用Mock API，则忽略连接错误
-      if (ENV_CONFIG.useMockAPI) {
+      if (ENV_CONFIG.useMockApi) {
         console.log('Using Mock API, ignoring connection error');
         this.setConnectionStatus('connected');
         return true;
@@ -197,7 +197,7 @@ class ApiService {
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     // 如果使用Mock API，直接返回模拟数据
-    if (ENV_CONFIG.useMockAPI) {
+    if (ENV_CONFIG.useMockApi) {
       console.warn(`Using Mock API for ${options.method || 'GET'} ${endpoint} - real API call skipped`);
       throw new Error('Mock API mode is enabled, but no mock handler is available for this endpoint');
     }
@@ -265,7 +265,7 @@ class ApiService {
   async healthCheck(): Promise<any> {
     try {
       // 如果使用Mock API，返回模拟的健康状态
-      if (ENV_CONFIG.useMockAPI) {
+      if (ENV_CONFIG.useMockApi) {
         return { 
           status: 'OK', 
           message: 'Using Mock API',
@@ -286,7 +286,7 @@ class ApiService {
       return { ...data, connected: true };
     } catch (error) {
       // 如果使用Mock API，返回模拟的健康状态
-      if (ENV_CONFIG.useMockAPI) {
+      if (ENV_CONFIG.useMockApi) {
         return { 
           status: 'OK', 
           message: 'Using Mock API',
@@ -590,9 +590,106 @@ class ApiService {
       localStorage.removeItem('authToken');
     }
   }
+
+  // 部署状态相关接口
+  async checkDeploymentHealth(): Promise<any> {
+    try {
+      if (ENV_CONFIG.useMockApi) {
+        return {
+          status: 'OK',
+          timestamp: new Date().toISOString(),
+          service: 'mock-api',
+          health: {
+            database: true,
+            redis: true,
+            server: true
+          }
+        };
+      }
+      
+      const response = await this.request<any>('/deployment/health');
+      return response;
+    } catch (error) {
+      console.error('Deployment health check failed:', error);
+      throw error;
+    }
+  }
+
+  async getDeploymentStatus(): Promise<any> {
+    try {
+      if (ENV_CONFIG.useMockApi) {
+        return {
+          isDeployed: true,
+          deploymentUrl: 'https://mock-deployment.example.com',
+          status: 'deployed',
+          lastDeployment: {
+            timestamp: new Date().toISOString(),
+            version: '1.0.0',
+            environment: 'development'
+          },
+          healthCheck: {
+            database: true,
+            redis: true,
+            server: true
+          }
+        };
+      }
+      
+      const response = await this.request<any>('/deployment/status');
+      return response;
+    } catch (error) {
+      console.error('Failed to get deployment status:', error);
+      throw error;
+    }
+  }
+
+  async getDeploymentInfo(): Promise<any> {
+    try {
+      if (ENV_CONFIG.useMockApi) {
+        return {
+          build: {
+            version: '1.0.0',
+            buildTime: new Date().toISOString(),
+            gitCommit: 'mock-commit-hash',
+            nodeVersion: 'v18.x.x',
+            environment: 'development'
+          },
+          system: {
+            platform: 'mock-platform',
+            arch: 'x64',
+            cpus: 4,
+            memory: {
+              total: '8GB',
+              free: '4GB'
+            },
+            uptime: '3 days, 5 hours'
+          },
+          environment: {
+            nodeEnv: 'development',
+            port: '3001',
+            dbHost: 'localhost',
+            redisHost: 'localhost'
+          }
+        };
+      }
+      
+      const response = await this.request<any>('/deployment/info');
+      return response;
+    } catch (error) {
+      console.error('Failed to get deployment info:', error);
+      throw error;
+    }
+  }
 }
 
 export const apiService = new ApiService();
+
+// 导出部署状态相关方法
+export const deploymentApi = {
+  checkHealth: () => apiService.checkDeploymentHealth(),
+  getStatus: () => apiService.getDeploymentStatus(),
+  getInfo: () => apiService.getDeploymentInfo(),
+};
 
 // 导出调试信息
 if (ENV_CONFIG.debugMode || ENV_CONFIG.isDevelopment) {
@@ -600,6 +697,6 @@ if (ENV_CONFIG.debugMode || ENV_CONFIG.isDevelopment) {
   (window as any).API_CONFIG = API_CONFIG;
   console.log('🔧 Debug mode enabled. API service available as window.apiService');
   console.log('🌐 API Base URL:', API_CONFIG.BASE_URL);
-  console.log('🎭 Mock API Mode:', ENV_CONFIG.useMockAPI);
+  console.log('🎭 Mock API Mode:', ENV_CONFIG.useMockApi);
   console.log('📊 API Config:', API_CONFIG);
 }

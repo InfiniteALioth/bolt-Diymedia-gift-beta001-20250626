@@ -168,3 +168,46 @@ export interface HealthCheckResponse {
   connected: boolean;
   error?: string;
 }
+
+// 部署状态类型
+export interface DeploymentStatus {
+  isDeployed: boolean;
+  deploymentUrl?: string;
+  status: 'not_deployed' | 'deploying' | 'deployed' | 'failed';
+  lastDeployment?: {
+    timestamp: string;
+    version: string;
+    environment: string;
+  };
+  healthCheck: {
+    database: boolean;
+    redis: boolean;
+    server: boolean;
+  };
+}
+
+export interface DeploymentInfo {
+  build: {
+    version: string;
+    buildTime: string;
+    gitCommit: string;
+    nodeVersion: string;
+    environment: string;
+  };
+  system: {
+    platform: string;
+    arch: string;
+    cpus: number;
+    memory: {
+      total: string;
+      free: string;
+    };
+    uptime: string;
+  };
+  environment: {
+    nodeEnv: string;
+    port: string;
+    dbHost: string;
+    redisHost: string;
+  };
+}
