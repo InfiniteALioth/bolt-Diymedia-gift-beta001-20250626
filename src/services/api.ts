@@ -1,20 +1,16 @@
 // 前端 API 服务 - 连接后端接口
 import { User, MediaItem, ChatMessage, MediaPage, Admin } from '../types';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1';
-const USE_MOCK_API = import.meta.env.VITE_USE_MOCK_API === 'true';
-const DEBUG_MODE = import.meta.env.VITE_DEBUG_MODE === 'true';
-const SHOW_API_LOGS = import.meta.env.VITE_SHOW_API_LOGS === 'true';
+import { API_CONFIG, API_ENDPOINTS, ENV_CONFIG, ERROR_MESSAGES } from '../config/api';
 
 // API日志记录
 const logApiCall = (method: string, url: string, data?: any) => {
-  if (SHOW_API_LOGS) {
+  if (ENV_CONFIG.showAPILogs) {
     console.log(`🌐 API ${method.toUpperCase()}: ${url}`, data ? { data } : '');
   }
 };
 
 const logApiResponse = (method: string, url: string, response: any, error?: any) => {
-  if (SHOW_API_LOGS) {
+  if (ENV_CONFIG.showAPILogs) {
     if (error) {
       console.error(`❌ API ${method.toUpperCase()} ERROR: ${url}`, error);
     } else {
@@ -23,15 +19,55 @@ const logApiResponse = (method: string, url: string, response: any, error?: any)
   }
 };
 
+// 错误处理函数
+const handleApiError = (error: any, endpoint: string): Error => {
+  if (error instanceof TypeError && error.message.includes('fetch')) {
+    return new Error(ERROR_MESSAGES.NETWORK_ERROR);
+  }
+  
+  if (error.message.includes('timeout')) {
+    return new Error(ERROR_MESSAGES.CONNECTION_TIMEOUT);
+  }
+  
+  // 根据状态码返回相应错误
+  if (error.status) {
+    switch (error.status) {
+      case 401:
+        return new Error(ERROR_MESSAGES.UNAUTHORIZED);
+      case 403:
+        return new Error(ERROR_MESSAGES.FORBIDDEN);
+      case 404:
+        return new Error(ERROR_MESSAGES.NOT_FOUND);
+      case 422:
+        return new Error(ERROR_MESSAGES.VALIDATION_ERROR);
+      case 500:
+        return new Error(ERROR_MESSAGES.SERVER_ERROR);
+      default:
+        return new Error(error.message || ERROR_MESSAGES.UNKNOWN_ERROR);
+    }
+  }
+  
+  return new Error(error.message || ERROR_MESSAGES.UNKNOWN_ERROR);
+};
+
 class ApiService {
+  private baseURL: string;
+  private timeout: number;
+
+  constructor() {
+    this.baseURL = API_CONFIG.BASE_URL;
+    this.timeout = API_CONFIG.TIMEOUT;
+  }
+
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const url = `${API_BASE_URL}${endpoint}`;
+    const url = `${this.baseURL}${endpoint}`;
     
     const config: RequestInit = {
       headers: {
-        'Content-Type': 'application/json',
+        ...API_CONFIG.HEADERS,
         ...options.headers,
       },
+      timeout: this.timeout,
       ...options,
     };
 
@@ -47,13 +83,22 @@ class ApiService {
     logApiCall(options.method || 'GET', endpoint, options.body ? JSON.parse(options.body as string) : undefined);
 
     try {
-      const response = await fetch(url, config);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+      
+      const response = await fetch(url, {
+        ...config,
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         const error = new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        (error as any).status = response.status;
         logApiResponse(options.method || 'GET', endpoint, null, error);
-        throw error;
+        throw handleApiError(error, endpoint);
       }
       
       const data = await response.json();
@@ -61,22 +106,18 @@ class ApiService {
       
       logApiResponse(options.method || 'GET', endpoint, result);
       return result;
-    } catch (error) {
+    } catch (error: any) {
       logApiResponse(options.method || 'GET', endpoint, null, error);
-      
-      // 网络错误处理
-      if (error instanceof TypeError && error.message.includes('fetch')) {
-        throw new Error('无法连接到服务器，请检查网络连接或确保后端服务正在运行');
-      }
-      
-      throw error;
+      throw handleApiError(error, endpoint);
     }
   }
 
   // 健康检查
   async healthCheck(): Promise<any> {
     try {
-      const response = await fetch(`${API_BASE_URL.replace('/api/v1', '')}/health`);
+      const response = await fetch(`${this.baseURL.replace('/api/v1', '')}/health`, {
+        timeout: 5000
+      });
       const data = await response.json();
       return { ...data, connected: true };
     } catch (error) {
@@ -84,14 +125,14 @@ class ApiService {
         status: 'error', 
         message: 'Backend not available',
         connected: false,
-        error: error.message 
+        error: (error as Error).message 
       };
     }
   }
 
   // 用户相关接口
   async registerUser(username: string, deviceId: string, email?: string): Promise<User> {
-    const response = await this.request<{ user: User; accessToken: string }>('/auth/user/register', {
+    const response = await this.request<{ user: User; accessToken: string }>(API_ENDPOINTS.AUTH.USER_REGISTER, {
       method: 'POST',
       body: JSON.stringify({ username, deviceId, email }),
     });
@@ -105,7 +146,7 @@ class ApiService {
   }
 
   async loginUser(deviceId: string, username?: string): Promise<User> {
-    const response = await this.request<{ user: User; accessToken: string }>('/auth/user/login', {
+    const response = await this.request<{ user: User; accessToken: string }>(API_ENDPOINTS.AUTH.USER_LOGIN, {
       method: 'POST',
       body: JSON.stringify({ deviceId, username }),
     });
@@ -120,7 +161,7 @@ class ApiService {
 
   // 管理员相关接口
   async loginAdmin(username: string, password: string): Promise<Admin> {
-    const response = await this.request<{ admin: Admin; accessToken: string }>('/auth/admin/login', {
+    const response = await this.request<{ admin: Admin; accessToken: string }>(API_ENDPOINTS.AUTH.ADMIN_LOGIN, {
       method: 'POST',
       body: JSON.stringify({ username, password }),
     });
@@ -132,40 +173,40 @@ class ApiService {
 
   // 媒体页面相关接口
   async getPageById(pageId: string): Promise<MediaPage> {
-    return this.request<MediaPage>(`/pages/${pageId}`);
+    return this.request<MediaPage>(API_ENDPOINTS.PAGES.BY_ID(pageId));
   }
 
   async getPageByCode(internalCode: string): Promise<MediaPage> {
-    return this.request<MediaPage>(`/pages/code/${internalCode}`);
+    return this.request<MediaPage>(API_ENDPOINTS.PAGES.BY_CODE(internalCode));
   }
 
   async getPages(): Promise<MediaPage[]> {
-    return this.request<MediaPage[]>('/pages');
+    return this.request<MediaPage[]>(API_ENDPOINTS.PAGES.LIST);
   }
 
   async createPage(pageData: Omit<MediaPage, 'id'>): Promise<MediaPage> {
-    return this.request<MediaPage>('/pages', {
+    return this.request<MediaPage>(API_ENDPOINTS.PAGES.LIST, {
       method: 'POST',
       body: JSON.stringify(pageData),
     });
   }
 
   async updatePage(pageId: string, updates: Partial<MediaPage>): Promise<MediaPage> {
-    return this.request<MediaPage>(`/pages/${pageId}`, {
+    return this.request<MediaPage>(API_ENDPOINTS.PAGES.BY_ID(pageId), {
       method: 'PUT',
       body: JSON.stringify(updates),
     });
   }
 
   async deletePage(pageId: string): Promise<void> {
-    return this.request<void>(`/pages/${pageId}`, {
+    return this.request<void>(API_ENDPOINTS.PAGES.BY_ID(pageId), {
       method: 'DELETE',
     });
   }
 
   // 媒体相关接口
   async getMediaItems(pageId: string): Promise<MediaItem[]> {
-    return this.request<MediaItem[]>(`/media/${pageId}`);
+    return this.request<MediaItem[]>(API_ENDPOINTS.MEDIA.LIST(pageId));
   }
 
   async uploadMedia(pageId: string, files: File[], caption: string): Promise<MediaItem[]> {
@@ -175,10 +216,10 @@ class ApiService {
 
     const token = localStorage.getItem('authToken');
     
-    logApiCall('POST', `/media/${pageId}`, { filesCount: files.length, caption });
+    logApiCall('POST', API_ENDPOINTS.MEDIA.UPLOAD(pageId), { filesCount: files.length, caption });
 
     try {
-      const response = await fetch(`${API_BASE_URL}/media/${pageId}`, {
+      const response = await fetch(`${this.baseURL}${API_ENDPOINTS.MEDIA.UPLOAD(pageId)}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -189,29 +230,29 @@ class ApiService {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         const error = new Error(errorData.message || `HTTP error! status: ${response.status}`);
-        logApiResponse('POST', `/media/${pageId}`, null, error);
-        throw error;
+        logApiResponse('POST', API_ENDPOINTS.MEDIA.UPLOAD(pageId), null, error);
+        throw handleApiError(error, API_ENDPOINTS.MEDIA.UPLOAD(pageId));
       }
 
       const data = await response.json();
       const result = data.data?.mediaItems || data.mediaItems || [];
       
-      logApiResponse('POST', `/media/${pageId}`, result);
+      logApiResponse('POST', API_ENDPOINTS.MEDIA.UPLOAD(pageId), result);
       return result;
-    } catch (error) {
-      logApiResponse('POST', `/media/${pageId}`, null, error);
-      throw error;
+    } catch (error: any) {
+      logApiResponse('POST', API_ENDPOINTS.MEDIA.UPLOAD(pageId), null, error);
+      throw handleApiError(error, API_ENDPOINTS.MEDIA.UPLOAD(pageId));
     }
   }
 
   async deleteMedia(mediaId: string): Promise<void> {
-    return this.request<void>(`/media/${mediaId}`, {
+    return this.request<void>(API_ENDPOINTS.MEDIA.BY_ID(mediaId), {
       method: 'DELETE',
     });
   }
 
   async updateMedia(mediaId: string, updates: { caption?: string }): Promise<MediaItem> {
-    return this.request<MediaItem>(`/media/${mediaId}`, {
+    return this.request<MediaItem>(API_ENDPOINTS.MEDIA.BY_ID(mediaId), {
       method: 'PUT',
       body: JSON.stringify(updates),
     });
@@ -219,11 +260,11 @@ class ApiService {
 
   // 聊天相关接口
   async getChatMessages(pageId: string): Promise<ChatMessage[]> {
-    return this.request<ChatMessage[]>(`/chat/${pageId}`);
+    return this.request<ChatMessage[]>(API_ENDPOINTS.CHAT.MESSAGES(pageId));
   }
 
   async sendMessage(pageId: string, content: string): Promise<ChatMessage> {
-    const response = await this.request<{ message: ChatMessage }>(`/chat/${pageId}`, {
+    const response = await this.request<{ message: ChatMessage }>(API_ENDPOINTS.CHAT.SEND(pageId), {
       method: 'POST',
       body: JSON.stringify({ content }),
     });
@@ -231,19 +272,19 @@ class ApiService {
   }
 
   async deleteMessage(messageId: string): Promise<void> {
-    return this.request<void>(`/chat/${messageId}`, {
+    return this.request<void>(API_ENDPOINTS.CHAT.DELETE(messageId), {
       method: 'DELETE',
     });
   }
 
   // 用户相关接口
   async getUserProfile(): Promise<User> {
-    const response = await this.request<{ user: User }>('/users/profile');
+    const response = await this.request<{ user: User }>(API_ENDPOINTS.USERS.PROFILE);
     return response.user;
   }
 
   async updateUserProfile(updates: { username?: string; avatar?: string }): Promise<User> {
-    const response = await this.request<{ user: User }>('/users/profile', {
+    const response = await this.request<{ user: User }>(API_ENDPOINTS.USERS.PROFILE, {
       method: 'PUT',
       body: JSON.stringify(updates),
     });
@@ -251,18 +292,18 @@ class ApiService {
   }
 
   async getUserStats(): Promise<any> {
-    const response = await this.request<{ stats: any }>('/users/stats');
+    const response = await this.request<{ stats: any }>(API_ENDPOINTS.USERS.STATS);
     return response.stats;
   }
 
   // 管理员功能接口
   async getAdmins(): Promise<Admin[]> {
-    const response = await this.request<{ admins: Admin[] }>('/admin/admins');
+    const response = await this.request<{ admins: Admin[] }>(API_ENDPOINTS.ADMIN.ADMINS);
     return response.admins;
   }
 
   async createAdmin(adminData: Omit<Admin, 'id'>): Promise<Admin> {
-    const response = await this.request<{ admin: Admin }>('/admin/admins', {
+    const response = await this.request<{ admin: Admin }>(API_ENDPOINTS.ADMIN.ADMINS, {
       method: 'POST',
       body: JSON.stringify(adminData),
     });
@@ -270,7 +311,7 @@ class ApiService {
   }
 
   async updateAdmin(adminId: string, updates: Partial<Admin>): Promise<Admin> {
-    const response = await this.request<{ admin: Admin }>(`/admin/admins/${adminId}`, {
+    const response = await this.request<{ admin: Admin }>(`${API_ENDPOINTS.ADMIN.ADMINS}/${adminId}`, {
       method: 'PUT',
       body: JSON.stringify(updates),
     });
@@ -278,13 +319,13 @@ class ApiService {
   }
 
   async deleteAdmin(adminId: string): Promise<void> {
-    return this.request<void>(`/admin/admins/${adminId}`, {
+    return this.request<void>(`${API_ENDPOINTS.ADMIN.ADMINS}/${adminId}`, {
       method: 'DELETE',
     });
   }
 
   async getGlobalStats(): Promise<any> {
-    const response = await this.request<{ stats: any }>('/admin/stats');
+    const response = await this.request<{ stats: any }>(API_ENDPOINTS.ADMIN.STATS);
     return response.stats;
   }
 
@@ -294,7 +335,7 @@ class ApiService {
     if (params?.limit) queryParams.append('limit', params.limit.toString());
     if (params?.search) queryParams.append('search', params.search);
     
-    const url = `/admin/users${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    const url = `${API_ENDPOINTS.ADMIN.USERS}${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     return this.request<any>(url);
   }
 
@@ -305,10 +346,10 @@ class ApiService {
 
     const token = localStorage.getItem('authToken');
     
-    logApiCall('POST', '/upload/single', { fileName: file.name, fileSize: file.size });
+    logApiCall('POST', API_ENDPOINTS.UPLOAD.SINGLE, { fileName: file.name, fileSize: file.size });
 
     try {
-      const response = await fetch(`${API_BASE_URL}/upload/single`, {
+      const response = await fetch(`${this.baseURL}${API_ENDPOINTS.UPLOAD.SINGLE}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -319,18 +360,18 @@ class ApiService {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         const error = new Error(errorData.message || `HTTP error! status: ${response.status}`);
-        logApiResponse('POST', '/upload/single', null, error);
-        throw error;
+        logApiResponse('POST', API_ENDPOINTS.UPLOAD.SINGLE, null, error);
+        throw handleApiError(error, API_ENDPOINTS.UPLOAD.SINGLE);
       }
 
       const data = await response.json();
       const result = data.data?.file || data.file;
       
-      logApiResponse('POST', '/upload/single', result);
+      logApiResponse('POST', API_ENDPOINTS.UPLOAD.SINGLE, result);
       return result;
-    } catch (error) {
-      logApiResponse('POST', '/upload/single', null, error);
-      throw error;
+    } catch (error: any) {
+      logApiResponse('POST', API_ENDPOINTS.UPLOAD.SINGLE, null, error);
+      throw handleApiError(error, API_ENDPOINTS.UPLOAD.SINGLE);
     }
   }
 
@@ -340,10 +381,10 @@ class ApiService {
 
     const token = localStorage.getItem('authToken');
     
-    logApiCall('POST', '/upload/multiple', { filesCount: files.length });
+    logApiCall('POST', API_ENDPOINTS.UPLOAD.MULTIPLE, { filesCount: files.length });
 
     try {
-      const response = await fetch(`${API_BASE_URL}/upload/multiple`, {
+      const response = await fetch(`${this.baseURL}${API_ENDPOINTS.UPLOAD.MULTIPLE}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -354,24 +395,24 @@ class ApiService {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         const error = new Error(errorData.message || `HTTP error! status: ${response.status}`);
-        logApiResponse('POST', '/upload/multiple', null, error);
-        throw error;
+        logApiResponse('POST', API_ENDPOINTS.UPLOAD.MULTIPLE, null, error);
+        throw handleApiError(error, API_ENDPOINTS.UPLOAD.MULTIPLE);
       }
 
       const data = await response.json();
       const result = data.data?.files || data.files || [];
       
-      logApiResponse('POST', '/upload/multiple', result);
+      logApiResponse('POST', API_ENDPOINTS.UPLOAD.MULTIPLE, result);
       return result;
-    } catch (error) {
-      logApiResponse('POST', '/upload/multiple', null, error);
-      throw error;
+    } catch (error: any) {
+      logApiResponse('POST', API_ENDPOINTS.UPLOAD.MULTIPLE, null, error);
+      throw handleApiError(error, API_ENDPOINTS.UPLOAD.MULTIPLE);
     }
   }
 
   async logout(): Promise<void> {
     try {
-      await this.request<void>('/auth/logout', {
+      await this.request<void>(API_ENDPOINTS.AUTH.LOGOUT, {
         method: 'POST',
       });
     } finally {
@@ -383,9 +424,11 @@ class ApiService {
 export const apiService = new ApiService();
 
 // 导出调试信息
-if (DEBUG_MODE) {
+if (ENV_CONFIG.debugMode) {
   (window as any).apiService = apiService;
+  (window as any).API_CONFIG = API_CONFIG;
   console.log('🔧 Debug mode enabled. API service available as window.apiService');
-  console.log('🌐 API Base URL:', API_BASE_URL);
-  console.log('🎭 Mock API Mode:', USE_MOCK_API);
+  console.log('🌐 API Base URL:', API_CONFIG.BASE_URL);
+  console.log('🎭 Mock API Mode:', ENV_CONFIG.useMockAPI);
+  console.log('📊 API Config:', API_CONFIG);
 }
