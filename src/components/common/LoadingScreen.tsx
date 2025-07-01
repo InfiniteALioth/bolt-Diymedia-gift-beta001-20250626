@@ -1,6 +1,7 @@
 import React from 'react';
 import { Loader, Wifi, WifiOff } from 'lucide-react';
-import { ConnectionStatus } from '../../services/api';
+
+type ConnectionStatus = 'checking' | 'connected' | 'disconnected' | 'error';
 
 interface LoadingScreenProps {
   message?: string;

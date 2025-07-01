@@ -1,9 +1,15 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { resolve } from 'path';
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    alias: {
+      '@': resolve(__dirname, './src')
+    }
+  },
   optimizeDeps: {
     exclude: ['lucide-react'],
   },
@@ -18,37 +24,26 @@ export default defineConfig({
         target: 'http://localhost:3001',
         changeOrigin: true,
         secure: false,
-        rewrite: (path) => path.replace(/^\/api/, '/api'),
-        configure: (proxy, _options) => {
-          proxy.on('error', (err, _req, _res) => {
-            console.log('🔴 API Proxy error:', err);
-          });
-          proxy.on('proxyReq', (proxyReq, req, _res) => {
-            console.log('🌐 API Proxy request:', req.method, req.url);
-          });
-          proxy.on('proxyRes', (proxyRes, req, _res) => {
-            console.log('✅ API Proxy response:', proxyRes.statusCode, req.url);
-          });
-        },
+        rewrite: (path) => path.replace(/^\/api/, '/api')
       },
       // 健康检查代理
       '/health': {
         target: 'http://localhost:3001',
         changeOrigin: true,
-        secure: false,
+        secure: false
       },
       // Socket.IO 代理
       '/socket.io': {
         target: 'http://localhost:3001',
         changeOrigin: true,
         ws: true, // 启用 WebSocket 代理
-        secure: false,
+        secure: false
       }
     }
   },
   build: {
     outDir: 'dist',
-    sourcemap: true,
+    sourcemap: process.env.NODE_ENV !== 'production',
     rollupOptions: {
       output: {
         manualChunks: {
@@ -62,6 +57,6 @@ export default defineConfig({
   },
   define: {
     // 确保环境变量在构建时可用
-    __DEV__: JSON.stringify(process.env.NODE_ENV === 'development'),
+    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development')
   }
 });

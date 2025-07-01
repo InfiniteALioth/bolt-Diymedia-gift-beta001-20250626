@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { CloudOff, RefreshCw, Settings, Info, AlertCircle, Server } from 'lucide-react';
-import { apiService } from '../../services/api';
 
 interface OfflineModeProps {
   onRetry: () => Promise<void>;
@@ -121,7 +120,6 @@ const OfflineMode: React.FC<OfflineModeProps> = ({
                 <div className="pt-2 border-t border-white/10">
                   <p className="font-medium text-white/70 mb-1">技术信息:</p>
                   <p>API地址: {import.meta.env.VITE_API_URL || '默认地址'}</p>
-                  <p>连接状态: {apiService.getConnectionStatus()}</p>
                   <p>当前时间: {new Date().toLocaleTimeString()}</p>
                 </div>
               </div>
