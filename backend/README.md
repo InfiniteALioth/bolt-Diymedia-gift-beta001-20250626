@@ -2,7 +2,7 @@
 
 A robust Node.js backend API for the Interactive Media Platform, built with Express.js, TypeScript, and MySQL.
 
-## Features
+## Features    
 
 - **User Authentication**: JWT-based authentication for users and admins
 - **Media Management**: Upload, store, and manage images, videos, and audio files
@@ -15,7 +15,7 @@ A robust Node.js backend API for the Interactive Media Platform, built with Expr
 - **Validation**: Input validation and sanitization
 - **Error Handling**: Centralized error handling
 
-## Tech Stack
+## Tech Stack    
 
 - **Runtime**: Node.js 18+
 - **Framework**: Express.js
