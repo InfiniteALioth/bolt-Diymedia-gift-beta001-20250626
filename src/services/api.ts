@@ -1,7 +1,8 @@
-// 前端 API 服务 - 连接后端接口
+// 前端 API 服务 - 连接后端接口或使用 Mock API
 import { User, MediaItem, ChatMessage, MediaPage, Admin } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1';
+const USE_MOCK_API = import.meta.env.VITE_USE_MOCK_API === 'true' || !import.meta.env.VITE_API_URL;
 
 class ApiService {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
