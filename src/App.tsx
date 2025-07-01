@@ -15,7 +15,7 @@ function App() {
         <Route path="/" element={<MediaPage />} />
         <Route path="/page/:pageId" element={<MediaPage />} />
         
-        {/* Admin Routes - 修复路由访问问题 */}
+        {/* Admin Routes */}
         <Route 
           path="/admin" 
           element={
@@ -27,7 +27,6 @@ function App() {
           } 
         />
         
-        {/* 添加管理员登录页面的直接路由 */}
         <Route 
           path="/admin/login" 
           element={
@@ -39,7 +38,6 @@ function App() {
           } 
         />
         
-        {/* 添加管理员仪表板的直接路由 */}
         <Route 
           path="/admin/dashboard" 
           element={
@@ -51,7 +49,7 @@ function App() {
           } 
         />
         
-        {/* Fallback - 确保未匹配的路由重定向到首页 */}
+        {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
