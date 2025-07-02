@@ -1,274 +1,86 @@
 import { useState, useEffect, useCallback } from 'react';
 import { MediaItem, ChatMessage } from '../types';
+import { apiService } from '../services/api';
+import { mockApiService } from '../services/mockData';
 
-interface MediaStorage {
-  mediaItems: MediaItem[];
-  chatMessages: ChatMessage[];
-}
-
-// IndexedDB helper functions
-class MediaStorageDB {
-  private dbName: string;
-  private version = 1;
-  private db: IDBDatabase | null = null;
-
-  constructor(pageId: string) {
-    this.dbName = `mediaPage_${pageId}`;
-  }
-
-  async init(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open(this.dbName, this.version);
-
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => {
-        this.db = request.result;
-        resolve();
-      };
-
-      request.onupgradeneeded = (event) => {
-        const db = (event.target as IDBOpenDBRequest).result;
-        
-        // Create object stores
-        if (!db.objectStoreNames.contains('mediaItems')) {
-          const mediaStore = db.createObjectStore('mediaItems', { keyPath: 'id' });
-          mediaStore.createIndex('pageId', 'pageId', { unique: false });
-          mediaStore.createIndex('createdAt', 'createdAt', { unique: false });
-        }
-
-        if (!db.objectStoreNames.contains('chatMessages')) {
-          const chatStore = db.createObjectStore('chatMessages', { keyPath: 'id' });
-          chatStore.createIndex('pageId', 'pageId', { unique: false });
-          chatStore.createIndex('createdAt', 'createdAt', { unique: false });
-        }
-
-        if (!db.objectStoreNames.contains('mediaBlobs')) {
-          db.createObjectStore('mediaBlobs', { keyPath: 'id' });
-        }
-      };
-    });
-  }
-
-  async saveMediaItem(mediaItem: MediaItem, blob?: Blob): Promise<void> {
-    if (!this.db) throw new Error('Database not initialized');
-
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(['mediaItems', 'mediaBlobs'], 'readwrite');
-      
-      transaction.onerror = () => reject(transaction.error);
-      transaction.oncomplete = () => resolve();
-
-      // Save media item metadata
-      const mediaStore = transaction.objectStore('mediaItems');
-      mediaStore.put(mediaItem);
-
-      // Save blob if provided
-      if (blob) {
-        const blobStore = transaction.objectStore('mediaBlobs');
-        blobStore.put({ id: mediaItem.id, blob });
-      }
-    });
-  }
-
-  async getMediaItems(): Promise<MediaItem[]> {
-    if (!this.db) throw new Error('Database not initialized');
-
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(['mediaItems'], 'readonly');
-      const store = transaction.objectStore('mediaItems');
-      const request = store.getAll();
-
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => {
-        const items = request.result || [];
-        // Sort by creation date, newest first
-        items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        resolve(items);
-      };
-    });
-  }
-
-  async getMediaBlob(mediaId: string): Promise<Blob | null> {
-    if (!this.db) throw new Error('Database not initialized');
-
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(['mediaBlobs'], 'readonly');
-      const store = transaction.objectStore('mediaBlobs');
-      const request = store.get(mediaId);
-
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => {
-        const result = request.result;
-        resolve(result ? result.blob : null);
-      };
-    });
-  }
-
-  async deleteMediaItem(mediaId: string): Promise<void> {
-    if (!this.db) throw new Error('Database not initialized');
-
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(['mediaItems', 'mediaBlobs'], 'readwrite');
-      
-      transaction.onerror = () => reject(transaction.error);
-      transaction.oncomplete = () => resolve();
-
-      const mediaStore = transaction.objectStore('mediaItems');
-      const blobStore = transaction.objectStore('mediaBlobs');
-      
-      mediaStore.delete(mediaId);
-      blobStore.delete(mediaId);
-    });
-  }
-
-  async saveChatMessages(messages: ChatMessage[]): Promise<void> {
-    if (!this.db) throw new Error('Database not initialized');
-
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(['chatMessages'], 'readwrite');
-      const store = transaction.objectStore('chatMessages');
-      
-      transaction.onerror = () => reject(transaction.error);
-      transaction.oncomplete = () => resolve();
-
-      // Clear existing messages and add new ones
-      store.clear();
-      messages.forEach(message => store.add(message));
-    });
-  }
-
-  async getChatMessages(): Promise<ChatMessage[]> {
-    if (!this.db) throw new Error('Database not initialized');
-
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(['chatMessages'], 'readonly');
-      const store = transaction.objectStore('chatMessages');
-      const request = store.getAll();
-
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => {
-        const messages = request.result || [];
-        // Sort by creation date
-        messages.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-        resolve(messages);
-      };
-    });
-  }
-
-  async clearAll(): Promise<void> {
-    if (!this.db) throw new Error('Database not initialized');
-
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction(['mediaItems', 'chatMessages', 'mediaBlobs'], 'readwrite');
-      
-      transaction.onerror = () => reject(transaction.error);
-      transaction.oncomplete = () => resolve();
-
-      transaction.objectStore('mediaItems').clear();
-      transaction.objectStore('chatMessages').clear();
-      transaction.objectStore('mediaBlobs').clear();
-    });
-  }
-}
-
-// Helper function to create MediaItem from File
-const createMediaItemFromFile = async (
-  file: File, 
-  uploaderName: string, 
-  caption: string, 
-  uploaderId: string, 
-  pageId: string
-): Promise<{ mediaItem: MediaItem; blob: Blob }> => {
-  try {
-    let type: 'image' | 'video' | 'audio';
-    if (file.type.startsWith('image/')) type = 'image';
-    else if (file.type.startsWith('video/')) type = 'video';
-    else if (file.type.startsWith('audio/')) type = 'audio';
-    else throw new Error('Unsupported file type');
-
-    const mediaItem: MediaItem = {
-      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      type,
-      url: '', // Will be generated from blob when needed
-      thumbnail: type === 'image' ? '' : undefined, // Will be generated from blob when needed
-      uploaderId,
-      uploaderName,
-      caption,
-      createdAt: new Date().toISOString(),
-      pageId
-    };
-
-    return { mediaItem, blob: file };
-  } catch (error) {
-    console.error('Failed to create media item from file:', error);
-    throw error;
-  }
-};
+// 开发模式开关
+const USE_MOCK_API = import.meta.env.VITE_USE_MOCK_API === 'true';
 
 export function useMediaStorage(pageId: string) {
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
-  const [db, setDb] = useState<MediaStorageDB | null>(null);
-  const [blobUrls, setBlobUrls] = useState<Map<string, string>>(new Map());
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const [lastLoadTime, setLastLoadTime] = useState<Date | null>(null);
 
-  // Initialize IndexedDB
-  useEffect(() => {
-    const initDB = async () => {
-      try {
-        const database = new MediaStorageDB(pageId);
-        await database.init();
-        setDb(database);
+  // 加载数据
+  const loadData = useCallback(async (showLoading = true) => {
+    if (!pageId) return;
+    
+    if (showLoading) {
+      setIsLoading(true);
+    }
+    setError(null);
+    
+    try {
+      const api = USE_MOCK_API ? mockApiService : apiService;
+      
+      const [items, messages] = await Promise.all([
+        api.getMediaItems(pageId),
+        api.getChatMessages(pageId)
+      ]);
 
-        // Load existing data
-        const [items, messages] = await Promise.all([
-          database.getMediaItems(),
-          database.getChatMessages()
-        ]);
-
-        console.log('从 IndexedDB 加载数据:', { items: items.length, messages: messages.length });
-        
-        // Create blob URLs for media items
-        const urlMap = new Map<string, string>();
-        for (const item of items) {
-          try {
-            const blob = await database.getMediaBlob(item.id);
-            if (blob) {
-              const url = URL.createObjectURL(blob);
-              urlMap.set(item.id, url);
-              // Update item with blob URL
-              item.url = url;
-              if (item.type === 'image') {
-                item.thumbnail = url;
-              }
-            }
-          } catch (error) {
-            console.error('Failed to load blob for item:', item.id, error);
-          }
+      setMediaItems(items);
+      setChatMessages(messages);
+      setLastLoadTime(new Date());
+      setRetryCount(0);
+    } catch (error) {
+      console.error('Failed to load data:', error);
+      
+      // 提供更友好的错误消息
+      let errorMessage = '数据加载失败';
+      if (error instanceof Error) {
+        if (error.message.includes('fetch')) {
+          errorMessage = '无法连接到服务器，请检查网络连接';
+        } else if (error.message.includes('timeout')) {
+          errorMessage = '服务器响应超时，请稍后再试';
+        } else {
+          errorMessage = error.message;
         }
-
-        setBlobUrls(urlMap);
-        setMediaItems(items);
-        setChatMessages(messages);
-      } catch (error) {
-        console.error('初始化 IndexedDB 失败:', error);
-        // Fallback to empty state
+      }
+      
+      setError(errorMessage);
+      setRetryCount(prev => prev + 1);
+      
+      // 使用空数据作为回退
+      if (!isLoaded) {
         setMediaItems([]);
         setChatMessages([]);
-      } finally {
-        setIsLoaded(true);
       }
-    };
-
-    initDB();
-
-    // Cleanup blob URLs on unmount
-    return () => {
-      blobUrls.forEach(url => URL.revokeObjectURL(url));
-    };
+    } finally {
+      setIsLoaded(true);
+      setIsLoading(false);
+    }
   }, [pageId]);
 
-  // 添加媒体项 - 接受 File 数组并存储到 IndexedDB
+  // 初始加载数据
+  useEffect(() => {
+    loadData();
+    
+    // 设置定期刷新
+    const refreshInterval = setInterval(() => {
+      // 只有在已经成功加载过数据的情况下才自动刷新
+      if (isLoaded && !error) {
+        loadData(false); // 不显示加载状态，静默刷新
+      }
+    }, 60000); // 每分钟刷新一次
+    
+    return () => clearInterval(refreshInterval);
+  }, [loadData, isLoaded, error]);
+
+  // 添加媒体项
   const addMediaItems = useCallback(async (
     files: File[], 
     uploaderName: string, 
@@ -276,118 +88,155 @@ export function useMediaStorage(pageId: string) {
     uploaderId: string, 
     pageId: string
   ) => {
-    if (!db) {
-      console.error('Database not initialized');
-      alert('数据库未初始化，请刷新页面重试');
-      return;
-    }
-
+    setIsLoading(true);
+    setError(null);
+    
     try {
-      console.log('开始处理文件:', files.length);
-      const newItems: MediaItem[] = [];
-      const newBlobUrls = new Map(blobUrls);
+      const api = USE_MOCK_API ? mockApiService : apiService;
+      const newItems = await api.uploadMedia(pageId, files, caption);
       
-      for (const file of files) {
-        try {
-          const { mediaItem, blob } = await createMediaItemFromFile(file, uploaderName, caption, uploaderId, pageId);
-          
-          // Save to IndexedDB
-          await db.saveMediaItem(mediaItem, blob);
-          
-          // Create blob URL for immediate use
-          const blobUrl = URL.createObjectURL(blob);
-          newBlobUrls.set(mediaItem.id, blobUrl);
-          
-          // Update media item with blob URL
-          mediaItem.url = blobUrl;
-          if (mediaItem.type === 'image') {
-            mediaItem.thumbnail = blobUrl;
-          }
-          
-          newItems.push(mediaItem);
-          console.log('文件处理完成:', file.name, '-> 存储到 IndexedDB');
-        } catch (error) {
-          console.error('处理文件失败:', file.name, error);
-          alert(`处理文件 "${file.name}" 失败，请重试`);
+      // 确保新项目有正确的上传者信息
+      const itemsWithUploader = newItems.map(item => ({
+        ...item,
+        uploaderName,
+        uploaderId
+      }));
+      
+      setMediaItems(prev => [...itemsWithUploader, ...prev]);
+      console.log('Successfully added', newItems.length, 'media items');
+      return newItems;
+    } catch (error) {
+      console.error('Failed to add media items:', error);
+      
+      // 提供更友好的错误消息
+      let errorMessage = '媒体上传失败';
+      if (error instanceof Error) {
+        if (error.message.includes('fetch')) {
+          errorMessage = '无法连接到服务器，请检查网络连接';
+        } else if (error.message.includes('timeout')) {
+          errorMessage = '上传超时，请稍后再试';
+        } else if (error.message.includes('size')) {
+          errorMessage = '文件大小超出限制';
+        } else {
+          errorMessage = error.message;
         }
       }
-
-      if (newItems.length > 0) {
-        setBlobUrls(newBlobUrls);
-        setMediaItems(prev => [...newItems, ...prev]); // Add new items at the beginning
-        console.log('成功添加', newItems.length, '个媒体项');
-      }
-    } catch (error) {
-      console.error('添加媒体项失败:', error);
-      alert('添加媒体失败，请重试');
+      
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setIsLoading(false);
     }
-  }, [db, blobUrls]);
+  }, []);
 
   // 删除媒体项
   const removeMediaItem = useCallback(async (itemId: string) => {
-    if (!db) return;
-
+    setIsLoading(true);
+    setError(null);
+    
     try {
-      await db.deleteMediaItem(itemId);
-      
-      // Revoke blob URL
-      const blobUrl = blobUrls.get(itemId);
-      if (blobUrl) {
-        URL.revokeObjectURL(blobUrl);
-        const newBlobUrls = new Map(blobUrls);
-        newBlobUrls.delete(itemId);
-        setBlobUrls(newBlobUrls);
+      if (!USE_MOCK_API) {
+        await apiService.deleteMedia(itemId);
       }
       
       setMediaItems(prev => prev.filter(item => item.id !== itemId));
-      console.log('删除媒体项:', itemId);
+      console.log('Deleted media item:', itemId);
     } catch (error) {
-      console.error('删除媒体项失败:', error);
-      alert('删除失败，请重试');
+      console.error('Failed to delete media item:', error);
+      
+      // 提供更友好的错误消息
+      let errorMessage = '媒体删除失败';
+      if (error instanceof Error) {
+        if (error.message.includes('fetch')) {
+          errorMessage = '无法连接到服务器，请检查网络连接';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setIsLoading(false);
     }
-  }, [db, blobUrls]);
+  }, []);
 
   // 添加聊天消息
   const addChatMessage = useCallback(async (message: ChatMessage) => {
-    if (!db) return;
-
+    setIsLoading(true);
+    setError(null);
+    
     try {
-      const updatedMessages = [...chatMessages, message];
-      await db.saveChatMessages(updatedMessages);
-      setChatMessages(updatedMessages);
+      const api = USE_MOCK_API ? mockApiService : apiService;
+      const newMessage = await api.sendMessage(message.pageId, message.content);
+      
+      // 确保消息有正确的用户信息
+      const messageWithUser = {
+        ...newMessage,
+        username: message.username,
+        userId: message.userId
+      };
+      
+      setChatMessages(prev => [...prev, messageWithUser]);
+      return messageWithUser;
     } catch (error) {
-      console.error('保存聊天消息失败:', error);
-      alert('发送消息失败，请重试');
+      console.error('Failed to send message:', error);
+      
+      // 提供更友好的错误消息
+      let errorMessage = '消息发送失败';
+      if (error instanceof Error) {
+        if (error.message.includes('fetch')) {
+          errorMessage = '无法连接到服务器，请检查网络连接';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      setError(errorMessage);
+      
+      // 在离线模式下，仍然添加消息到本地（标记为本地消息）
+      if (USE_MOCK_API || error.toString().includes('fetch')) {
+        const offlineMessage = {
+          ...message,
+          id: message.id || `local_${Date.now()}`,
+          isLocal: true
+        };
+        setChatMessages(prev => [...prev, offlineMessage]);
+        return offlineMessage;
+      }
+      
+      throw new Error(errorMessage);
+    } finally {
+      setIsLoading(false);
     }
-  }, [db, chatMessages]);
+  }, []);
 
   // 清空所有数据
   const clearAllData = useCallback(async () => {
-    if (!db) return;
+    setMediaItems([]);
+    setChatMessages([]);
+    setError(null);
+    console.log('Cleared all data');
+  }, []);
 
-    try {
-      await db.clearAll();
-      
-      // Revoke all blob URLs
-      blobUrls.forEach(url => URL.revokeObjectURL(url));
-      setBlobUrls(new Map());
-      
-      setMediaItems([]);
-      setChatMessages([]);
-      console.log('已清空所有数据');
-    } catch (error) {
-      console.error('清空数据失败:', error);
-      alert('清空数据失败，请重试');
-    }
-  }, [db, blobUrls]);
+  // 重新加载数据
+  const reloadData = useCallback(async () => {
+    setIsLoaded(false);
+    await loadData();
+  }, [loadData]);
 
   return {
     mediaItems,
     chatMessages,
     isLoaded,
+    isLoading,
+    error,
+    retryCount,
+    lastLoadTime,
     addMediaItems,
     removeMediaItem,
     addChatMessage,
-    clearAllData
+    clearAllData,
+    reloadData
   };
 }

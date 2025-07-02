@@ -1,11 +1,14 @@
-import React, { useState } from 'react';
-import { Shield, Eye, EyeOff, Home } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Shield, Eye, EyeOff, Home, Wifi, WifiOff, RefreshCw } from 'lucide-react';
+import { useAuth } from '../../hooks/useAuth';
+import { OfflineMode } from '../common';
 
 interface AdminLoginProps {
-  onLogin: (username: string, password: string) => boolean;
+  onLogin: (username: string, password: string) => Promise<boolean>;
 }
 
 const AdminLogin: React.FC<AdminLoginProps> = ({ onLogin }) => {
+  const { connectionStatus, checkConnection } = useAuth();
   const [credentials, setCredentials] = useState({
     username: '',
     password: ''
@@ -13,6 +16,8 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLogin }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  const USE_MOCK_API = import.meta.env.VITE_USE_MOCK_API === 'true';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,19 +29,31 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLogin }) => {
     setIsLoading(true);
     setError('');
 
-    // Simulate API delay
-    setTimeout(() => {
-      const success = onLogin(credentials.username, credentials.password);
+    try {
+      const success = await onLogin(credentials.username, credentials.password);
       if (!success) {
         setError('用户名或密码错误');
       }
+    } catch (error: any) {
+      setError(error.message || '登录失败，请重试');
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   const handleBackToHome = () => {
     window.location.href = '/';
   };
+
+  // 如果是真实API模式且连接断开，显示离线模式
+  if (!USE_MOCK_API && connectionStatus === 'disconnected') {
+    return (
+      <OfflineMode 
+        onRetry={checkConnection}
+        errorMessage="无法连接到管理后台服务器"
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
@@ -51,6 +68,28 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLogin }) => {
               <Home className="h-4 w-4" />
               <span className="text-sm">返回首页</span>
             </button>
+            
+            {/* 连接状态指示器 */}
+            {!USE_MOCK_API && (
+              <div className="flex items-center space-x-2">
+                {connectionStatus === 'connected' ? (
+                  <div className="flex items-center space-x-1 text-green-400">
+                    <Wifi className="h-4 w-4" />
+                    <span className="text-xs">已连接</span>
+                  </div>
+                ) : connectionStatus === 'checking' ? (
+                  <div className="flex items-center space-x-1 text-yellow-400">
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    <span className="text-xs">连接中</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center space-x-1 text-red-400">
+                    <WifiOff className="h-4 w-4" />
+                    <span className="text-xs">连接失败</span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="text-center mb-8">
@@ -74,6 +113,7 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLogin }) => {
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
                 placeholder="请输入管理员用户名"
                 autoComplete="username"
+                disabled={isLoading}
               />
             </div>
 
@@ -90,11 +130,13 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLogin }) => {
                   className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 pr-12"
                   placeholder="请输入管理员密码"
                   autoComplete="current-password"
+                  disabled={isLoading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-3.5 text-gray-400 hover:text-white transition-colors duration-200"
+                  disabled={isLoading}
                 >
                   {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
@@ -109,9 +151,9 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLogin }) => {
 
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || (!USE_MOCK_API && connectionStatus !== 'connected')}
               className={`w-full py-3 px-4 rounded-lg font-medium transition-all duration-200 ${
-                isLoading
+                isLoading || (!USE_MOCK_API && connectionStatus !== 'connected')
                   ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
                   : 'bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5'
               }`}
@@ -133,7 +175,10 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLogin }) => {
             <h4 className="text-xs font-medium text-gray-300 mb-1">调试信息</h4>
             <p className="text-xs text-gray-400">
               当前URL: {window.location.href}<br />
-              路径: {window.location.pathname}
+              路径: {window.location.pathname}<br />
+              API模式: {USE_MOCK_API ? 'Mock API' : 'Real API'}<br />
+              API地址: {import.meta.env.VITE_API_URL || '默认地址'}<br />
+              连接状态: {connectionStatus}
             </p>
           </div>
         </div>

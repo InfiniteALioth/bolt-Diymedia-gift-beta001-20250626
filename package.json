@@ -1,11 +1,11 @@
 {
-  "name": "interactive-media-platform",
+  "name": "interactive-media-platform-frontend",
   "private": true,
   "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "tsc && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -14,10 +14,12 @@
     "qrcode": "^1.5.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^6.20.0"
+    "react-router-dom": "^6.20.0",
+    "socket.io-client": "^4.7.4"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.1",
+    "@types/node": "^24.0.8",
     "@types/qrcode": "^1.5.5",
     "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",

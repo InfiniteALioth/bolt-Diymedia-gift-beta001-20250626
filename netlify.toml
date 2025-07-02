@@ -1,0 +1,26 @@
+# Netlify 配置文件
+
+[build]
+  # 构建命令
+  command = "npm run build"
+  # 构建输出目录
+  publish = "dist"
+
+# 重定向和重写规则
+[[redirects]]
+  # 单页应用路由处理 - 所有路径都重定向到 index.html
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# 环境变量
+[build.environment]
+  # 设置 Node 版本
+  NODE_VERSION = "18"
+
+# 开发环境配置
+[dev]
+  command = "npm run dev"
+  port = 5173
+  targetPort = 5173
+  framework = "#custom"
